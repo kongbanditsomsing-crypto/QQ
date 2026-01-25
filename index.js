@@ -1,44 +1,54 @@
-import fetch from "node-fetch";
+import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } from 'discord.js';
 
-// ==== CONFIG ====
-const TARGET_USER = "username_ngl";   // ใส่ username NGL
-const MESSAGE = "ข้อความที่ต้องการส่ง"; // ข้อความที่จะยิง
-const TIMES = 250;                     // จำนวนรอบ
-const DELAY = 1;                      // หน่วงเวลาต่อรอบ (วินาที)
-// =================
+const TOKEN = process.env.TOKEN;
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+});
 
-async function sendMsg(user, text) {
-  await fetch(`https://ngl.link/${user}`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded"
-    },
-    body: `question=${encodeURIComponent(text)}`
-  });
+client.once(Events.ClientReady, () => {
+  console.log(`BOT ON: ${client.user.tag}`);
+});
 
-  console.log(`ยิงแล้ว -> ${text}`);
-}
+// คำสั่ง /spam
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isChatInputCommand()) return;
 
-async function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+  if (interaction.commandName === 'spam') {
+    const row = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder().setCustomId('custom').setLabel('กำหนดเอง').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('random').setLabel('สุ่ม').setStyle(ButtonStyle.Secondary),
+      );
 
-async function start() {
-  console.log("เริ่มยิงข้อความ...");
-  console.log(`เป้าหมาย: ${TARGET_USER}`);
-  console.log(`ข้อความ: ${MESSAGE}`);
-  console.log(`จำนวนรอบ: ${TIMES}`);
-  console.log(`ดีเลย์: ${DELAY}s`);
-  console.log("===================================");
+    await interaction.reply({ content: 'เลือกโหมดยิง:', components: [row] });
+  }
+});
 
-  for (let i = 1; i <= TIMES; i++) {
-    await sendMsg(TARGET_USER, MESSAGE);
-    console.log(`รอบ ${i}/${TIMES}`);
-    await sleep(DELAY * 10);
+// ปุ่ม
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId === 'custom') {
+    await interaction.reply('พิมพ์ข้อความที่ต้องการยิง');
+    
+    const filter = m => m.author.id === interaction.user.id;
+    const collector = interaction.channel.createMessageCollector({ filter, max: 1, time: 10 });
+
+    collector.on('collect', async (msg) => {
+      for (let i = 0; i < 99; i++) {
+        await msg.channel.send(msg.content);
+      }
+    });
   }
 
-  console.log("ยิงเสร็จแล้ว!");
-  process.exit(0);
-}
+  if (interaction.customId === 'random') {
+    const list = ['วะวะวะเว็กช็อปมาเว้ว', 'เอ็นจอยย', 'ควEEE'];
+    const pick = list[Math.floor(Math.random() * list.length)];
 
-start();
+    for (let i = 0; i < 99; i++) {
+      await interaction.reply(pick);
+    }
+  }
+});
+
+client.login(TOKEN);
