@@ -101,10 +101,10 @@ client.on('interactionCreate', async interaction => {
 }
 
 if (mode === 'custom') {
-  return interaction.reply({
-    content: `พิมพ์เนื้อหาที่จะส่งให้**${user}**`,
-    ephemeral: true
-  });
+   return interaction.reply({
+      content: `พิมพ์เนื้อหาที่จะส่งให้**${user}**`,
+      ephemeral: true
+   });
 }
 
 } // ปิด interaction.isButton()
