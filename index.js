@@ -30,6 +30,7 @@ client.on('ready', () => {
     console.log('Bot online');
 });
 
+const cooldown = new Set();
 client.on('interactionCreate', async (interaction) => {
     if (interaction.isChatInputCommand() && interaction.commandName === 'ngl') {
         const user = interaction.options.getString('user');
