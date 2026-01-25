@@ -27,7 +27,7 @@ async function register() {
     console.log('Slash registered');
 }
 
-client.on('ready', () => {
+client.login(process.env.TOKEN);
     console.log('Bot online');
 });
 
