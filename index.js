@@ -79,4 +79,4 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 });
-console.log("Bot Started");
+client.login(process.env.TOKEN);
