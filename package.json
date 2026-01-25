@@ -4,9 +4,10 @@
   "type": "module",
   "main": "send.js",
   "scripts": {
-    "start": "node send.js",
-    "register": "node register-command.js"
-  },
+    "scripts": {
+  "start": "node index.js",
+  "register": "node register-command.js"
+}
   "dependencies": {
     "discord.js": "^14.15.1",
     "better-sqlite3": "^8.7.0"
