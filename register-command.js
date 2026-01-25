@@ -28,3 +28,4 @@ async function register() {
 }
 
 register();
+process.exit(0);
