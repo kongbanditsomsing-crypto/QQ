@@ -1,55 +1,76 @@
-import { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } from 'discord.js';
+import { 
+    Client, 
+    GatewayIntentBits, 
+    ActionRowBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    Events 
+} from 'discord.js';
+import axios from "axios";
 
-const TOKEN = process.env.TOKEN;
-client.login(TOKEN);
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 
+// === Bot Online Log ===
 client.once(Events.ClientReady, () => {
-  console.log(`BOT ON: ${client.user.tag}`);
+    console.log(`BOT ONLINE: ${client.user.tag}`);
 });
 
-// คำสั่ง /spam
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isChatInputCommand()) return;
+// === Slash Command /spam ===
+client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'spam') {
-    const row = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder().setCustomId('custom').setLabel('กำหนดเอง').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('random').setLabel('สุ่ม').setStyle(ButtonStyle.Secondary),
-      );
+    if (interaction.commandName === 'spam') {
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('custom')
+                .setLabel('กำหนดเอง')
+                .setStyle(ButtonStyle.Primary),
 
-    await interaction.reply({ content: 'เลือกโหมดยิง:', components: [row] });
-  }
-});
+            new ButtonBuilder()
+                .setCustomId('random')
+                .setLabel('สุ่ม')
+                .setStyle(ButtonStyle.Secondary),
+        );
 
-// ปุ่ม
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (!interaction.isButton()) return;
-
-  if (interaction.customId === 'custom') {
-    await interaction.reply('พิมพ์ข้อความที่ต้องการยิง');
-    
-    const filter = m => m.author.id === interaction.user.id;
-    const collector = interaction.channel.createMessageCollector({ filter, max: 1, time: 10 });
-
-    collector.on('collect', async (msg) => {
-      for (let i = 0; i < 99; i++) {
-        await msg.channel.send(msg.content);
-      }
-    });
-  }
-
-  if (interaction.customId === 'random') {
-    const list = ['วะวะวะเว็กช็อปมาเว้ว', 'เอ็นจอยย', 'ควEEE'];
-    const pick = list[Math.floor(Math.random() * list.length)];
-
-    for (let i = 0; i < 99; i++) {
-      await interaction.reply(pick);
+        await interaction.reply({
+            content: 'เลือกโหมดยิง:',
+            components: [row],
+            ephemeral: true
+        });
     }
-  }
 });
 
+// === ปุ่มกด ===
+client.on(Events.InteractionCreate, async interaction => {
+    if (!interaction.isButton()) return;
+
+    if (interaction.customId === 'custom') {
+        await interaction.reply({
+            content: 'พิมพ์ข้อความที่จะยิงด้านล่าง '
+        });
+    }
+
+    if (interaction.customId === 'random') {
+        await interaction.reply({
+            content: 'กำลังสุ่มยิง...'
+        });
+    }
+});
+
+// === ฟังก์ชันยิง NGL ===
+async function sendNGL(username, msg) {
+    await axios.post(`https://ngl.link/${username}`, {
+        question: msg,
+        deviceId: "ffffffff-ffff-ffff-ffff-ffffffffffff"
+    });
+}
+
+// === Login Bot ===
+const TOKEN = process.env.TOKEN;
 client.login(TOKEN);
