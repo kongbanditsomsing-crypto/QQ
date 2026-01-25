@@ -55,32 +55,27 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ embeds: [embed], components: [row] });
     }
 
- if (mode === 'random') {
+    if (interaction.isButton()) {
+        const [mode, user] = interaction.customId.split(':');
 
-    if (cooldown.has(user)) {
-        return interaction.reply({ content: `รอ 60 วิแล้วค่อยยิงใหม่นะจ๊ะคนดีย์ `, ephemeral: true });
-    }
+        if (mode === 'random') {
 
-    cooldown.add(user);
-    setTimeout(() => cooldown.delete(user), 60000);
+            if (cooldown.has(user)) {
+                return interaction.reply({ content: `รอ 60 วิแล้วค่อยยิงใหม่นะจ๊ะ`, ephemeral: true });
+            }
 
-    for (let i = 0; i < 500; i++) {
-        await sendNGL(user, 'สุ่มข้อความ ❤️✊👐🎉🎊🌝👐🧠😽💙😽💥🦻🎊☺️😌🙂‍↕️🙂‍↔️😏🤤😛😑😬🥺😔😔🥴🤪😜😝😐😐😶‍🌫️😶‍🌫️🫥🤐🤔🤫🧐🤨😱🫣🤗🥱🥱🤭🫢😒😒😮‍💨😤😡🤬😞😕🫤☹️😢😥😥😟😓😓🤯😖😣😩😵🫨🤒😪🤮🤢🥵🥵');
-    }
+            cooldown.add(user);
+            setTimeout(() => cooldown.delete(user), 60000);
 
-    return interaction.reply({ content: `ยิงให้ ${user} x500 เรียบร้อย ` });
-}
+            for (let i = 0; i < 500; i++) {
+                await sendNGL(user, 'สุ่มข้อความ 🥵🤢🤮😪🤒🫨😵😩😣😖🤯😓😟😥😢☹️🫤😕😞🤬😡😤😮‍💨😒🧐🤨😱🫣🤗🥱🤭🫢🌚🌝🌞🌛🌜😺😸😹🙉🙈😿🙀😽😼😻💨💫⭐🌟✨⚡💥💢🎊💜💙💚💛💛❤️❤️💓💞💕🩷💘💝💖❤️‍🩹❤️‍🩹🗣️♥️💌💕💞❤️‍🔥');
+            }
+
+            return interaction.reply({ content: `ยิงให้ ${user} x500 เรียบร้อยงับ ` });
+        }
 
         if (mode === 'custom') {
-            return interaction.reply({ content: `ให้พิมพ์ข้อความเองละส่งให้ **${user}** นะ ✍` });
+            return interaction.reply({ content: `ให้พิมพ์ข้อความเองจะส่งให้ **${user}** นะ ✍` });
         }
     }
 });
-
-register();
-client.login(TOKEN);
-const express = require("express")
-const app = express()
-
-app.get("/", (req, res) => res.send("Bot alive"))
-app.listen(process.env.PORT || 3000)
