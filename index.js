@@ -79,3 +79,4 @@ client.on('interactionCreate', async (interaction) => {
         }
     }
 });
+console.log("Bot Started");
