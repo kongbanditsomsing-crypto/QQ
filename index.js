@@ -7,14 +7,6 @@ async function sendNGL(username, message) {
   });
 }
 import fetch from "node-fetch";
-import readline from "readline";
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-const ask = (q) => new Promise(r => rl.question(q, r));
 
 async function sendMsg(target, text) {
   await fetch(`https://ngl.link/${target}`, {
@@ -25,7 +17,7 @@ async function sendMsg(target, text) {
   console.log(`ส่งแล้ว -> ${text}`);
 }
 
-async function menu() {
+async {
   console.log("\n=== NGL BOT MENU ===");
   console.log("[1] ตั้งค่าเป้าหมาย (username)");
   console.log("[2] ตั้งค่าข้อความ");
@@ -37,13 +29,13 @@ async function menu() {
   return choice;
 }
 
-async function start() {
+async {
   let targetUser = "";
   let text = "";
   let times = 1;
   let delayTime = 10;
 
-  while (true) {
+   {
     const choice = await menu();
 
     if (choice === "1") {
