@@ -1,26 +1,29 @@
-import { REST, Routes, SlashCommandBuilder } from 'discord.js';
-import dotenv from 'dotenv';
-dotenv.config();
+import { REST, Routes, SlashCommandBuilder } from "discord.js";
+import "dotenv/config";
 
 const commands = [
   new SlashCommandBuilder()
-    .setName('ngl')
-    .setDescription('ส่งข้อความไป NGL')
-    .addStringOption(option =>
-      option.setName('user')
-        .setDescription('ชื่อผู้ใช้ NGL')
-        .setRequired(true))
-    .addStringOption(option =>
-      option.setName('text')
-        .setDescription('ข้อความที่จะส่ง')
-        .setRequired(true))
+    .setName("menu")
+    .setDescription("เปิดเมนูช่วยเหลือ")
 ].map(cmd => cmd.toJSON());
 
-export async function register() {
-  const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-  await rest.put(
-    Routes.applicationCommands(process.env.CLIENT_ID),
-    { body: commands }
-  );
-  console.log('✔ Slash Command registered');
-}
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID; // ถ้าอยาก global กูจะให้ version global ด้วยตอนท้าย
+
+const rest = new REST({ version: "10" }).setToken(TOKEN);
+
+(async () => {
+  try {
+    console.log("📡 Registering slash commands...");
+
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+      { body: commands }
+    );
+
+    console.log("✅ Slash commands registered!");
+  } catch (err) {
+    console.error("❌ Error registering commands:", err);
+  }
+})();
