@@ -1,31 +1,20 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
-import { REST, Routes, SlashCommandBuilder } from 'discord.js';
-
-const TOKEN = process.env.TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
-
-const commands = [
-    new SlashCommandBuilder()
-        .setName('spamngl')
-        .setDescription('ยิง NGL')
-].map(cmd => cmd.toJSON());
-
-const rest = new REST().setToken(TOKEN);
-
-async function register() {
-    try {
-        console.log('Registering slash commands...');
-        await rest.put(
-            Routes.applicationCommands(CLIENT_ID),
-            { body: commands }
-        );
-        console.log('Commands registered!');
-    } catch (err) {
-        console.error(err);
+async function sendNGL(username, text) {
+  try {
+    const payload = {
+      username,
+      question: text,
+      deviceId: crypto.randomUUID()
     }
-}
 
-register();
-process.exit(0);
+    await fetch("https://ngl.link/api/submit", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    })
+
+  } catch (err) {
+    console.log("NGL error:", err)
+  }
+}
