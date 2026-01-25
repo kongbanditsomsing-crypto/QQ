@@ -1,5 +1,20 @@
-export default async function sendNGL(user, text) {
-    // mock API (จะต่อ API จริงก็แก้ตรงนี้)
-    console.log(`ส่งให้ ${user}: ${text}`);
-    return { status: 'ok' };
+import crypto from 'crypto';
+
+export default async function sendNGL(username, text) {
+  try {
+    const payload = {
+      username,
+      question: text,
+      deviceId: crypto.randomUUID()
+    };
+
+    await fetch('https://ngl.link/api/submit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+  } catch (err) {
+    console.log('NGL error:', err);
+  }
 }
