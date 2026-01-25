@@ -1,30 +1,19 @@
-// register-command.js
-import { REST, Routes, SlashCommandBuilder } from 'discord.js';
-import 'dotenv/config'; // ให้โหลด TOKEN / CLIENT_ID จาก .env
-
-// --- Register commands ตรงนี้ ---
-const commands = [
-    new SlashCommandBuilder()
-        .setName('spam')
-        .setDescription('ยิง NGL')
-].map(cmd => cmd.toJSON());
-
-// --- REST API ของ Discord ---
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-
-async function main() {
-    try {
-        console.log('กำลังส่ง Slash Commands ไปที่ Discord...');
-
-        await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID),
-            { body: commands }
-        );
-
-        console.log('ส่ง Commands เสร็จแล้ว!');
-    } catch (err) {
-        console.error(err);
-    }
+{
+  "name": "nglbot",
+  "version": "1.0.0",
+  "description": "Discord NGL bot",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "register": "node register-command.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
-
-main();
