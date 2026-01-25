@@ -1,3 +1,4 @@
+const cooldown = new Set();
 import 'dotenv/config';
 import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import sendNGL from './send.js';
