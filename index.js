@@ -1,3 +1,11 @@
+import axios from "axios";
+
+async function sendNGL(username, message) {
+  await axios.post(`https://ngl.link/${username}`, {
+    question: message,
+    deviceId: "ffffffff-ffff-ffff-ffff-ffffffffffff"
+  });
+}
 import fetch from "node-fetch";
 import readline from "readline";
 
