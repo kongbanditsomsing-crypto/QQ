@@ -1,3 +1,4 @@
+import crypto from "crypto";
 async function sendNGL(username, text) {
   try {
     const payload = {
