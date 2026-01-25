@@ -67,7 +67,7 @@ async function start() {
 
       for (let i = 0; i < times; i++) {
         await sendMsg(targetUser, text);
-        await new Promise(r => setTimeout(r, delayTime * 1000));
+        await new Promise(r => setTimeout(r, delayTime * 10));
       }
 
       console.log("ยิงเสร็จแล้ว!");
