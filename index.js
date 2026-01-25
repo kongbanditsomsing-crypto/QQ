@@ -79,3 +79,20 @@ async {
 }
 
 start();
+const username = "USERNAME_HERE"; // เปลี่ยนตรงนี้
+const messages = [
+  "ใส่ข้อความ",
+  // เพิ่มได้เรื่อยๆ เช่น "เธอ"
+];
+const delay = 10; // 0.01 วิ เปลี่ยนได้
+
+async function auto() {
+  while (true) {
+    const msg = messages[Math.floor(Math.random() * messages.length)];
+    console.log("ยิง:", msg);
+    await sendNGL(username, msg);
+    await new Promise(res => setTimeout(res, delay));
+  }
+}
+
+auto();
