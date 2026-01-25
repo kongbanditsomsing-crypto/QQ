@@ -2,12 +2,13 @@
   "name": "nglbot",
   "version": "1.0.0",
   "type": "module",
+  "main": "index.js",
   "scripts": {
-  "start": "node index.js",
-  "deploy": "node register-command.js"
-}
+    "start": "node index.js",
+    "register": "node register-command.js"
+  },
   "dependencies": {
-    "discord.js": "^14.14.1",
-    "axios": "^1.6.7"
+    "axios": "^1.6.7",
+    "discord.js": "^14.14.1"
   }
 }
