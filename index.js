@@ -70,3 +70,8 @@ client.on('interactionCreate', async (interaction) => {
 
 register();
 client.login(TOKEN);
+const express = require("express")
+const app = express()
+
+app.get("/", (req, res) => res.send("Bot alive"))
+app.listen(process.env.PORT || 3000)
