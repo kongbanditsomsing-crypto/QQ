@@ -1,18 +1,14 @@
 {
-  "name": "my-discord-bot",
+  "name": "discord-bot",
   "version": "1.0.0",
-  "description": "Simple Discord Bot",
-  "main": "index.js",
   "type": "module",
+  "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "register": "node register-command.js"
   },
   "dependencies": {
-    "discord.js": "^14.13.0",
-    "dotenv": "^16.4.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
+    "discord.js": "^14.15.2",
+    "dotenv": "^16.4.5"
   }
 }
