@@ -1,17 +1,30 @@
 // register-command.js
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
+import 'dotenv/config'; // ให้โหลด TOKEN / CLIENT_ID จาก .env
 
+// --- Register commands ตรงนี้ ---
 const commands = [
     new SlashCommandBuilder()
-        .setName('spamngl')
+        .setName('spam')
         .setDescription('ยิง NGL')
 ].map(cmd => cmd.toJSON());
 
-const rest = new REST().setToken(process.env.TOKEN);
+// --- REST API ของ Discord ---
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
-await rest.put(
-    Routes.applicationCommands(process.env.CLIENT_ID),
-    { body: commands }
-);
+async function main() {
+    try {
+        console.log('กำลังส่ง Slash Commands ไปที่ Discord...');
 
-console.log('Commands registered!');
+        await rest.put(
+            Routes.applicationCommands(process.env.CLIENT_ID),
+            { body: commands }
+        );
+
+        console.log('ส่ง Commands เสร็จแล้ว!');
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+main();
