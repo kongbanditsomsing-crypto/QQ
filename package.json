@@ -1,5 +1,5 @@
 {
-  "name": "discord-bot",
+  "name": "qq-bot",
   "version": "1.0.0",
   "type": "module",
   "main": "index.js",
@@ -8,8 +8,7 @@
     "register": "node register-command.js"
   },
   "dependencies": {
-    "discord.js": "^14.15.2",
-    "dotenv": "^16.4.5",
-    "axios": "^1.6.7"
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.4.5"
   }
 }
