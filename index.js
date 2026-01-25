@@ -1,12 +1,12 @@
-import axios from "axios";
-
-async function sendNGL(username, message) {
-  await axios.post(`https://ngl.link/${username}`, {
-    question: message,
-    deviceId: "ffffffff-ffff-ffff-ffff-ffffffffffff"
-  });
-}
 import fetch from "node-fetch";
+import readline from "readline";
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+const ask = (q) => new Promise(r => rl.question(q, r));
 
 async function sendMsg(target, text) {
   await fetch(`https://ngl.link/${target}`, {
@@ -17,82 +17,66 @@ async function sendMsg(target, text) {
   console.log(`ส่งแล้ว -> ${text}`);
 }
 
-async {
-  console.log("\n=== NGL BOT MENU ===");
-  console.log("[1] ตั้งค่าเป้าหมาย (username)");
-  console.log("[2] ตั้งค่าข้อความ");
-  console.log("[3] ตั้งค่ารอบ / delay");
-  console.log("[4] เริ่มยิงข้อความ");
+async function menu() {
+  console.log("\n== NGL BOT MENU ==");
+  console.log("[1] ตั้งค่าชื่อเป้าหมาย (username)");
+  console.log("[2] ตั้งข้อความ");
+  console.log("[3] ตั้งจำนวนรอบ");
+  console.log("[4] ตั้ง delay (วินาที)");
+  console.log("[5] เริ่มยิงข้อความ");
   console.log("[0] ออก\n");
 
   const choice = await ask("เลือกเมนู: ");
   return choice;
 }
 
-async {
+async function start() {
   let targetUser = "";
   let text = "";
   let times = 1;
-  let delayTime = 10;
+  let delayTime = 3;
 
-   {
+  while (true) {
     const choice = await menu();
 
     if (choice === "1") {
       targetUser = await ask("ใส่ username: ");
-      console.log("✔ ตั้งค่าเรียบร้อย");
+      console.log(`ตั้ง username = ${targetUser}`);
     }
 
-    else if (choice === "2") {
-      text = await ask("ข้อความที่จะส่ง: ");
-      console.log("✔ ตั้งค่าเรียบร้อย");
+    if (choice === "2") {
+      text = await ask("ใส่ข้อความ: ");
+      console.log(`ข้อความ = ${text}`);
     }
 
-    else if (choice === "3") {
-      times = parseInt(await ask("จำนวนรอบ: "));
-      delayTime = parseInt(await ask("delay(ms): "));
-      console.log("✔ ตั้งค่าเรียบร้อย");
+    if (choice === "3") {
+      times = Number(await ask("จำนวนรอบ: "));
+      console.log(`จำนวนรอบ = ${times}`);
     }
 
-    else if (choice === "4") {
+    if (choice === "4") {
+      delayTime = Number(await ask("delay (วินาที): "));
+      console.log(`delay = ${delayTime}`);
+    }
+
+    if (choice === "5") {
       if (!targetUser || !text) {
-        console.log("ยังไม่ได้ตั้งค่าเป้าหมายหรือข้อความ");
+        console.log("ยังไม่ได้ตั้ง username หรือข้อความ");
         continue;
       }
+
       for (let i = 0; i < times; i++) {
         await sendMsg(targetUser, text);
-        await new Promise(r => setTimeout(r, delayTime));
+        await new Promise(r => setTimeout(r, delayTime * 1000));
       }
-      console.log("🎉 ยิงเสร็จแล้ว!\n");
+
+      console.log("ยิงเสร็จแล้ว!");
     }
 
-    else if (choice === "0") {
-      console.log("ปิดโปรแกรม");
-      rl.close();
-      break;
-    }
-
-    else {
-      console.log("❓ ไม่มีเมนูนี้");
+    if (choice === "0") {
+      process.exit(0);
     }
   }
 }
 
 start();
-const username = "USERNAME_HERE"; // เปลี่ยนตรงนี้
-const messages = [
-  "ใส่ข้อความ",
-  // เพิ่มได้เรื่อยๆ เช่น "เธอ"
-];
-const delay = 10; // 0.01 วิ เปลี่ยนได้
-
-async function auto() {
-  while (true) {
-    const msg = messages[Math.floor(Math.random() * messages.length)];
-    console.log("ยิง:", msg);
-    await sendNGL(username, msg);
-    await new Promise(res => setTimeout(res, delay));
-  }
-}
-
-auto();
