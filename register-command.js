@@ -1,19 +1,30 @@
-{
-  "name": "nglbot",
-  "version": "1.0.0",
-  "description": "Discord NGL bot",
-  "type": "module",
-  "main": "index.js",
-  "scripts": {
-    "start": "node index.js",
-    "register": "node register-command.js"
-  },
-  "dependencies": {
-    "axios": "^1.6.7",
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.4.1"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+import dotenv from 'dotenv';
+dotenv.config();
+
+import { REST, Routes, SlashCommandBuilder } from 'discord.js';
+
+const TOKEN = process.env.TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
+
+const commands = [
+    new SlashCommandBuilder()
+        .setName('spamngl')
+        .setDescription('ยิง NGL')
+].map(cmd => cmd.toJSON());
+
+const rest = new REST().setToken(TOKEN);
+
+async function register() {
+    try {
+        console.log('Registering slash commands...');
+        await rest.put(
+            Routes.applicationCommands(CLIENT_ID),
+            { body: commands }
+        );
+        console.log('Commands registered!');
+    } catch (err) {
+        console.error(err);
+    }
 }
+
+register();
