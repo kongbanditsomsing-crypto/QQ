@@ -356,3 +356,5 @@ if (process.env.DISCORD_TOKEN) {
 } else {
   console.error("❌ DISCORD_TOKEN is missing in environment secrets.");
 }
+
+setInterval(() => {}, 1000);
