@@ -3,6 +3,7 @@ import { REST, Routes, SlashCommandBuilder } from "discord.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
+const GUILD_ID = process.env.GUILD_ID;
 
 const commands = [
   new SlashCommandBuilder()
@@ -42,18 +43,25 @@ const commands = [
   new SlashCommandBuilder()
     .setName("tell_off")
     .setDescription("ยิง random ขัดใจคน")
-];
+]
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 (async () => {
   try {
-    console.log("Deploying slash commands...");
+    console.log("Deploying GUILD commands...");
+    await rest.put(
+      Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
+      { body: commands }
+    );
+    console.log("Guild deployed!");
+
+    console.log("Deploying GLOBAL commands...");
     await rest.put(
       Routes.applicationCommands(CLIENT_ID),
       { body: commands }
     );
-    console.log("Slash commands deployed.");
+    console.log("Global deployed!");
   } catch (err) {
     console.error(err);
   }
