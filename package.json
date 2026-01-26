@@ -7,7 +7,8 @@
     "register": "node register-command.js"
   },
   "dependencies": {
-    "discord.js": "^14.14.1",
-    "dotenv": "^16.3.1"
+    "discord.js": "^14.15.3",
+    "@discordjs/voice": "^0.16.0",
+    "dotenv": "^16.4.5"
   }
 }
