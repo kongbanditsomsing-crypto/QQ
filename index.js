@@ -16,9 +16,8 @@ const client = new Client({
   ],
 });
 
-const allowedUsers = new Set();
 const LOG_CHANNEL_ID = "1461588208675459217";
-const BLOCKED_GUILD_ID = "146024011876123456"; // <-- ต้องเป็นยาวๆ หน่อย
+const BLOCKED_GUILD_ID = "146024011876123456";
 
 const randomMessages = [
   "",
@@ -26,7 +25,7 @@ const randomMessages = [
   "ร้องไร",
   "ขำว่ะ",
   "คุ้มมั้ยเนี่ย",
-  "ไอ้แหวกกอหญ้า ไอ้บ้าห้าร้อยจำพวก ไอ้ปลวกใต้หลังคา ... (ตัด # ออก)",
+  "ไอ้แหวกกอหญ้า ไอ้บ้าห้าร้อยจำพวก ไอ้ปลวกใต้หลังคา ...",
   "จุ๊บบมั๊ววววววว",
   "เว็กช็อปมาเว้ววว",
   "เเค้นมั้ยถ้าเเค้นเข้าดิสมา5555",
@@ -36,16 +35,16 @@ const randomMessages = [
 ];
 
 client.once("ready", () => {
-  console.log(`Logged in as ${client.user.tag}`);
+  console.log(`${client.user.tag} is online.`)
 });
 
-// Interactions
+// Slash commands actions
 client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
     if (!interaction.guild) return;
 
-    // Block guild
+    // block guild
     if (interaction.guild.id === BLOCKED_GUILD_ID) {
       return interaction.reply({
         content: "อย่ามาใช้ในเซิฟกู",
@@ -53,13 +52,13 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
-    // Log
+    // log
     const logChannel = client.channels.cache.get(LOG_CHANNEL_ID);
     if (logChannel) {
-      logChannel.send(`📌 ใช้คำสั่ง /${interaction.commandName} โดย ${interaction.user.tag}`);
+      logChannel.send(`/${interaction.commandName} ใช้โดย ${interaction.user.tag}`);
     }
 
-    // Spam text
+    // ---- /spam ----
     if (interaction.commandName === "spam") {
       const text = interaction.options.getString("text");
       const count = Math.min(interaction.options.getInteger("count") ?? 5, 100000);
@@ -72,7 +71,7 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
-    // Emoji spam
+    // ---- /emoji ----
     if (interaction.commandName === "emoji") {
       const emoji = interaction.options.getString("emoji");
       const count = Math.min(interaction.options.getInteger("count") ?? 5, 100000);
@@ -86,51 +85,27 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
-    // Join voice
+    // ---- /join ----
     if (interaction.commandName === "join") {
       const channel = interaction.member.voice?.channel;
       if (!channel) return interaction.reply({
-        content: "มึงต้องอยู่ในห้องเสียงก่อน",
+        content: "เข้า voice ก่อน",
         ephemeral: true,
       });
 
       joinVoiceChannel({
         channelId: channel.id,
-        guildId: channel.guild.id,
-        adapterCreator: channel.guild.voiceAdapterCreator,
+        guildId: interaction.guild.id,
+        adapterCreator: interaction.guild.voiceAdapterCreator,
       });
 
       interaction.reply({ content: `เข้าห้อง ${channel.name}`, ephemeral: true });
     }
 
-    // Promo boom
-    if (interaction.commandName === "promo_boom") {
-      await interaction.reply({ content: "เริ่ม", ephemeral: true });
-
-      for (let i = 1; i <= 1000; i++) {
-        try {
-          const channel = await interaction.guild.channels.create({
-            name: `boom-${i}`,
-            type: ChannelType.GuildText,
-            permissionOverwrites: [{
-              id: interaction.guild.roles.everyone.id,
-              allow: [PermissionsBitField.Flags.ViewChannel],
-            }],
-          });
-
-          for (let k = 1; k <= 1000; k++) {
-            await channel.send(`โปรโมทร้าน VEXSHOP #${k}`);
-            await new Promise(res => setTimeout(res, 5));
-          }
-        } catch (err) {
-          console.log(`Error: ${err.message}`);
-        }
-      }
-    }
-
-    // Tell off
+    // ---- /tell_off ----
     if (interaction.commandName === "tell_off") {
       const count = Math.min(interaction.options.getInteger("count") ?? 5, 10000);
+
       await interaction.reply({ content: "ยิง random", ephemeral: true });
 
       for (let i = 0; i < count; i++) {
