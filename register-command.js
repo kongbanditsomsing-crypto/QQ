@@ -1,71 +1,40 @@
-require('dotenv').config();
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+require("dotenv").config();
+const { REST, Routes, SlashCommandBuilder } = require("discord.js");
+
+const TOKEN = process.env.DISCORD_TOKEN;
+const CLIENT_ID = process.env.CLIENT_ID;
 
 const commands = [
-    new SlashCommandBuilder()
-        .setName('join')
-        .setDescription('เข้าห้องและเริ่มยิงข้อความ'),
-        
-    new SlashCommandBuilder()
-        .setName('spam')
-        .setDescription('ยิงข้อความแบบ spam')
-        .addStringOption(option =>
-            option.setName('text')
-                  .setDescription('ข้อความที่จะ spam')
-                  .setRequired(true)
-        ),
+  new SlashCommandBuilder()
+    .setName("spam")
+    .setDescription("Spam text")
+    .addStringOption(o => o.setName("text").setDescription("ข้อความ").setRequired(true))
+    .addIntegerOption(o => o.setName("count").setDescription("จำนวน")),
 
-    new SlashCommandBuilder()
-        .setName('emoji')
-        .setDescription('ยิง emoji แบบ random'),
-    
-    new SlashCommandBuilder()
-        .setName('promo')
-        .setDescription('ยิง promo'),
+  new SlashCommandBuilder()
+    .setName("emoji")
+    .setDescription("Spam emoji")
+    .addStringOption(o => o.setName("emoji").setDescription("emoji").setRequired(true))
+    .addIntegerOption(o => o.setName("count").setDescription("จำนวน"))
+    .addIntegerOption(o => o.setName("delay").setDescription("delay ms")),
 
-    new SlashCommandBuilder()
-        .setName('promo_boom')
-        .setDescription('ยิง promo แบบหนักๆ'),
+  new SlashCommandBuilder()
+    .setName("join")
+    .setDescription("เข้าห้องเสียง"),
 
-    new SlashCommandBuilder()
-        .setName('kick')
-        .setDescription('เตะสมาชิก'),
+  new SlashCommandBuilder()
+    .setName("tell_off")
+    .setDescription("ยิง random ขัดใจคน"),
+];
 
-    new SlashCommandBuilder()
-        .setName('tell_off')
-        .setDescription('ด่าแบบ random'),
-
-    new SlashCommandBuilder()
-        .setName('senddm')
-        .setDescription('ส่งข้อความเข้า DM')
-        .addStringOption(option =>
-            option.setName('text')
-                  .setDescription('ข้อความส่งเข้า DM')
-                  .setRequired(true)
-        ),
-
-    new SlashCommandBuilder()
-        .setName('allowdm')
-        .setDescription('ให้บอทรับ DM'),
-
-    new SlashCommandBuilder()
-        .setName('shootdm')
-        .setDescription('ยิง DM random')
-].map(cmd => cmd.toJSON());
-
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 (async () => {
-    try {
-        console.log('⏳ Deploying slash commands...');
-
-        await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID),
-            { body: commands },
-        );
-
-        console.log('✅ Slash commands deployed success!');
-    } catch (error) {
-        console.error('❌ Error:', error);
-    }
+  try {
+    console.log("Deploying...");
+    await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
+    console.log("Deployed.");
+  } catch (err) {
+    console.error(err);
+  }
 })();
