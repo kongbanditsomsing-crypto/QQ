@@ -1,10 +1,12 @@
-const {
+import {
   Client,
   GatewayIntentBits,
   ChannelType,
-  PermissionsBitField,
-} = require("discord.js");
-const { joinVoiceChannel } = require("@discordjs/voice");
+  PermissionsBitField
+} from "discord.js";
+
+import { joinVoiceChannel } from "@discordjs/voice";
+import "dotenv/config";
 
 const client = new Client({
   intents: [
@@ -31,20 +33,18 @@ const randomMessages = [
   "เเค้นมั้ยถ้าเเค้นเข้าดิสมา5555",
   "เซิฟกากๆโดนยิงได้อะตลกกก",
   "อย่าร้องเลยสร้างใหม่ได้",
-  "ไม่เอาไม่ร้องงงงงงมากอดมาจุ๊บบมั๊ววว",
+  "ไม่เอาไม่ร้องงงงงงงมากอดมาจุ๊บบมั๊ววว",
 ];
 
 client.once("ready", () => {
-  console.log(`${client.user.tag} is online.`)
+  console.log(`${client.user.tag} is online.`);
 });
 
-// Slash commands actions
 client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
     if (!interaction.guild) return;
 
-    // block guild
     if (interaction.guild.id === BLOCKED_GUILD_ID) {
       return interaction.reply({
         content: "อย่ามาใช้ในเซิฟกู",
@@ -52,13 +52,11 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
-    // log
     const logChannel = client.channels.cache.get(LOG_CHANNEL_ID);
     if (logChannel) {
       logChannel.send(`/${interaction.commandName} ใช้โดย ${interaction.user.tag}`);
     }
 
-    // ---- /spam ----
     if (interaction.commandName === "spam") {
       const text = interaction.options.getString("text");
       const count = Math.min(interaction.options.getInteger("count") ?? 5, 100000);
@@ -71,7 +69,6 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
-    // ---- /emoji ----
     if (interaction.commandName === "emoji") {
       const emoji = interaction.options.getString("emoji");
       const count = Math.min(interaction.options.getInteger("count") ?? 5, 100000);
@@ -85,7 +82,6 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
-    // ---- /join ----
     if (interaction.commandName === "join") {
       const channel = interaction.member.voice?.channel;
       if (!channel) return interaction.reply({
@@ -102,14 +98,15 @@ client.on("interactionCreate", async (interaction) => {
       interaction.reply({ content: `เข้าห้อง ${channel.name}`, ephemeral: true });
     }
 
-    // ---- /tell_off ----
     if (interaction.commandName === "tell_off") {
       const count = Math.min(interaction.options.getInteger("count") ?? 5, 10000);
 
       await interaction.reply({ content: "ยิง random", ephemeral: true });
 
       for (let i = 0; i < count; i++) {
-        await interaction.channel.send(randomMessages[Math.floor(Math.random() * randomMessages.length)]);
+        await interaction.channel.send(
+          randomMessages[Math.floor(Math.random() * randomMessages.length)]
+        );
         await new Promise(res => setTimeout(res, 10));
       }
     }
