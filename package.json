@@ -1,16 +1,12 @@
 {
   "name": "discord-bot",
   "version": "1.0.0",
-  "description": "my discord bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "register": "node register-command.js"
   },
   "dependencies": {
-    "@discordjs/voice": "^1.0.1",
-    "axios": "^1.6.0",
-    "better-sqlite3": "^8.5.0",
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.0"
   }
