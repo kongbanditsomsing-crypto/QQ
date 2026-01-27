@@ -10,24 +10,19 @@ const commands = [
     .setName("spam")
     .setDescription("Spam text")
     .addStringOption(o =>
-      o.setName("text").setDescription("ข้อความ").setRequired(true)
-    )
+      o.setName("text").setDescription("ข้อความ").setRequired(true))
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
-    ),
+      o.setName("count").setDescription("จำนวน")),
 
   new SlashCommandBuilder()
     .setName("emoji")
     .setDescription("Spam emoji")
     .addStringOption(o =>
-      o.setName("emoji").setDescription("emoji").setRequired(true)
-    )
+      o.setName("emoji").setDescription("emoji").setRequired(true))
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
-    )
+      o.setName("count").setDescription("จำนวน"))
     .addIntegerOption(o =>
-      o.setName("delay").setDescription("delay ms")
-    ),
+      o.setName("delay").setDescription("delay ms")),
 
   new SlashCommandBuilder()
     .setName("join")
@@ -42,12 +37,12 @@ const rest = new REST({ version: "10" }).setToken(TOKEN);
 
 (async () => {
   try {
-    console.log("Deploying (guild) slash commands...");
+    console.log("Deploying slash commands to guild...");
     await rest.put(
       Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID),
       { body: commands }
     );
-    console.log("Guild slash commands deployed.");
+    console.log("Slash commands deployed to guild.");
   } catch (err) {
     console.error(err);
   }
