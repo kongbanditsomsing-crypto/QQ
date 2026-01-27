@@ -34,7 +34,19 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("tell_off")
-    .setDescription("ยิง random ขัดใจคน"),
+    .setDescription("ยิง random คมๆ"),
+
+  // คำสั่งใหม่
+  new SlashCommandBuilder()
+    .setName("create_room")
+    .setDescription("สร้างห้อง text ตามจำนวนที่กำหนด")
+    .addIntegerOption(o =>
+      o.setName("amount")
+       .setDescription("จำนวนห้อง")
+       .setRequired(true)
+       .setMinValue(1)
+       .setMaxValue(20)
+    ),
 ];
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
