@@ -18,10 +18,7 @@ const client = new Client({
   ],
 });
 
-// ❗ อันนี้ให้เทสก่อนว่า channel ID ถูกของมึงมั้ย
 const LOG_CHANNEL_ID = "1461588208675459217";
-
-// ❗ ถ้าไม่ใช้ feature นี้กูวางไว้เฉยๆ
 const BLOCKED_GUILD_ID = "146024011876123456";
 
 const randomMessages = [
@@ -37,7 +34,7 @@ const randomMessages = [
   "@everyone เซิฟกากๆโดนยิงได้อะตลกกก",
   "@everyone อย่าร้องเลยสร้างใหม่ได้",
   "@everyone ไม่เอาไม่ร้องงงงงงงมากอดมาจุ๊บบมั๊ววว",
-  "@everyone อ๊าาเงี่ยนนนนนนนนนนนนนนนนนนนนนนนนนนนนนนนนนนนน",
+  "@everyone อ๊าาา",
 ];
 
 client.once("ready", () => {
@@ -49,7 +46,6 @@ client.on("interactionCreate", async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
     if (!interaction.guild) return;
 
-    // ❗ block guild
     if (BLOCKED_GUILD_ID && interaction.guild.id === BLOCKED_GUILD_ID) {
       return interaction.reply({
         content: "อย่ามาใช้ในเซิฟกู",
@@ -57,7 +53,6 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
-    // ❗ log command
     if (LOG_CHANNEL_ID) {
       const logChannel = client.channels.cache.get(LOG_CHANNEL_ID);
       if (logChannel) {
@@ -70,7 +65,7 @@ client.on("interactionCreate", async (interaction) => {
       const text = interaction.options.getString("text");
       const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
 
-      await interaction.reply({ content: "เริ่มลั่นละนะจ๊ะ มึงโดนอะหยังกูไม่เกี่ยว", ephemeral: true });
+      await interaction.reply({ content: "ลั่นละนะไอ้สัส", ephemeral: true });
 
       for (let i = 0; i < count; i++) {
         await interaction.channel.send(text);
@@ -97,7 +92,7 @@ client.on("interactionCreate", async (interaction) => {
       const vc = interaction.member.voice?.channel;
       if (!vc) {
         return interaction.reply({
-          content: "มึงเข้า vc ก่อนอันดับเเรกไอ้ควาย",
+          content: "มึงเข้า vc ก่อน",
           ephemeral: true,
         });
       }
@@ -111,7 +106,7 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       return interaction.reply({
-        content: `เข้าห้อง ${vc.name} แล้วอีสัส`,
+        content: `เข้าห้อง ${vc.name} แล้ว`,
         ephemeral: true
       });
     }
@@ -130,16 +125,18 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
-    // /create (สร้างห้องโปรโมท)
-    if (interaction.commandName === "create") {
-      await interaction.reply({ content: "กำลังยิงห้องโปรโมทงับ มึงโดนไรกูไม่เกี่ยว", ephemeral: true });
+    // /create_room
+    if (interaction.commandName === "create_room") {
+      const amount = interaction.options.getInteger("amount");
 
-      const roomCount = 1000;
-      const messageCount = 1000;
+      await interaction.reply({
+        content: `กำลังสร้าง ${amount} ห้อง`,
+        ephemeral: true
+      });
 
-      for (let i = 0; i < roomCount; i++) {
-        const channel = await interaction.guild.channels.create({
-          name: `promo-${i + 1}`,
+      for (let i = 1; i <= amount; i++) {
+        await interaction.guild.channels.create({
+          name: `room-${i}`,
           type: ChannelType.GuildText,
           permissionOverwrites: [
             {
@@ -151,10 +148,34 @@ client.on("interactionCreate", async (interaction) => {
             }
           ],
         });
+        await new Promise(r => setTimeout(r, 1));
+      }
+
+      await interaction.followUp({
+        content: `สร้างครบแล้ว ${amount} ห้อง`,
+        ephemeral: true
+      });
+    }
+
+    // /create
+    if (interaction.commandName === "create") {
+      const roomCount = interaction.options.getInteger("rooms") ?? 1000;
+      const messageCount = interaction.options.getInteger("messages") ?? 1000;
+
+      await interaction.reply({
+        content: `ยิงห้อง ${roomCount} ห้อง ข้อความ ${messageCount}`,
+        ephemeral: true,
+      });
+
+      for (let i = 0; i < roomCount; i++) {
+        const channel = await interaction.guild.channels.create({
+          name: `promo-${i + 1}`,
+          type: ChannelType.GuildText,
+        });
 
         for (let j = 0; j < messageCount; j++) {
           await channel.send(
-            `@everyone ⚡ โปรโมทเซิฟดิสคอร์ด — VEXSHOP • (${j + 1}/${messageCount})`
+            `@everyone โปรโมทเซิฟ (${j + 1}/${messageCount})`
           );
           await new Promise(r => setTimeout(r, 1));
         }
@@ -166,5 +187,4 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// login
 client.login(process.env.DISCORD_TOKEN);
