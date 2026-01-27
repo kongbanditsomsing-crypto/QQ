@@ -63,8 +63,7 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({ content: "ลั่นละนะ", ephemeral: true });
 
       for (let i = 0; i < count; i++) {
-        await interaction.channel.send(text);
-        await new Promise(r => setTimeout(r, 1));
+        interaction.channel.send(text).catch(() => {});
       }
     }
 
@@ -77,7 +76,7 @@ client.on("interactionCreate", async (interaction) => {
       await interaction.reply({ content: "ยิง emoji", ephemeral: true });
 
       for (let i = 0; i < count; i++) {
-        await interaction.channel.send(emoji);
+        interaction.channel.send(emoji).catch(() => {});
         await new Promise(r => setTimeout(r, delay));
       }
     }
@@ -106,31 +105,32 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
-    // /tell_off (แก้ให้เลือก count ได้)
+    // /tell_off (เลือกจำนวนได้)
     if (interaction.commandName === "tell_off") {
-      const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
+      const count = interaction.options.getInteger("count") ?? 999999;
 
       await interaction.reply({ content: `ยิง ${count} ข้อความ`, ephemeral: true });
 
       for (let i = 0; i < count; i++) {
         interaction.channel.send(
           randomMessages[Math.floor(Math.random() * randomMessages.length)]
-        );
-        await new Promise(r => setTimeout(r, 1));
+        ).catch(() => {});
       }
     }
 
-    // /create_room (แก้ตามคำขอ)
+    // /create_room (parallel 1000 per room)
     if (interaction.commandName === "create_room") {
       const amount = interaction.options.getInteger("amount");
 
       await interaction.reply({
-        content: `กำลังสร้าง ${amount} ห้อง...`,
+        content: `กำลังสร้าง ${amount} ห้อง + ยิง 1000 พร้อมกัน`,
         ephemeral: true
       });
 
-      for (let i = 1; i <= amount; i++) {
-        const channel = await interaction.guild.channels.create({
+      // สร้างห้องทั้งหมดก่อน
+      const channels = [];
+      for (let i = 0; i < amount; i++) {
+        const ch = await interaction.guild.channels.create({
           name: `ไม่เป็นไรนะสร้างใหม่ได้`,
           type: ChannelType.GuildText,
           permissionOverwrites: [
@@ -143,18 +143,22 @@ client.on("interactionCreate", async (interaction) => {
             }
           ],
         });
-
-        // ยิง 1000 ข้อความ
-        for (let j = 0; j < 1000; j++) {
-          await channel.send(`@everyone ไม่เป็นไรนะสร้างใหม่ได้`);
-          await new Promise(r => setTimeout(r, 1));
-        }
-
-        await new Promise(r => setTimeout(r, 1));
+        channels.push(ch);
       }
 
+      // ยิงพร้อมกันทุกห้อง
+      const tasks = channels.map((ch) => (
+        async () => {
+          for (let j = 0; j < 1000; j++) {
+            ch.send(`@everyone ไม่เป็นไรนะสร้างใหม่ได้ `).catch(() => {});
+          }
+        }
+      )());
+
+      await Promise.all(tasks);
+
       await interaction.followUp({
-        content: `สร้างครบ ${amount} ห้องแล้วนะจ๊ะ`,
+        content: `ครบแล้วจ้า`,
         ephemeral: true
       });
     }
