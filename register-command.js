@@ -5,6 +5,7 @@ const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
 const commands = [
+
   new SlashCommandBuilder()
     .setName("spam")
     .setDescription("Spam text")
@@ -34,19 +35,19 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("tell_off")
-    .setDescription("ยิง random คมๆ"),
+    .setDescription("ยิง random คมๆ ยิงน้อยพ่องตาย"),
 
-  // คำสั่งใหม่
   new SlashCommandBuilder()
     .setName("create_room")
-    .setDescription("สร้างห้อง text ตามจำนวนที่กำหนด")
+    .setDescription("ยิงโปรโมท ยิงน้อยพ่องตาย")
     .addIntegerOption(o =>
       o.setName("amount")
        .setDescription("จำนวนห้อง")
        .setRequired(true)
        .setMinValue(1)
-       .setMaxValue(20)
+       .setMaxValue(1000) // ให้ 1000 max เผื่ออยากเพิ่มทีหลัง
     ),
+
 ];
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
