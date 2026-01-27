@@ -1,5 +1,5 @@
-require("dotenv/config");
-const { REST, Routes, SlashCommandBuilder } = require("discord.js");
+import "dotenv/config";
+import { REST, Routes, SlashCommandBuilder } from "discord.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -9,30 +9,23 @@ const commands = [
     .setName("spam")
     .setDescription("Spam text")
     .addStringOption(o =>
-      o.setName("text")
-        .setDescription("ข้อความ")
-        .setRequired(true)
+      o.setName("text").setDescription("ข้อความ").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count")
-        .setDescription("จำนวน")
+      o.setName("count").setDescription("จำนวน")
     ),
 
   new SlashCommandBuilder()
     .setName("emoji")
     .setDescription("Spam emoji")
     .addStringOption(o =>
-      o.setName("emoji")
-        .setDescription("emoji")
-        .setRequired(true)
+      o.setName("emoji").setDescription("emoji").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count")
-        .setDescription("จำนวน")
+      o.setName("count").setDescription("จำนวน")
     )
     .addIntegerOption(o =>
-      o.setName("delay")
-        .setDescription("delay ms")
+      o.setName("delay").setDescription("delay ms")
     ),
 
   new SlashCommandBuilder()
@@ -41,7 +34,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("tell_off")
-    .setDescription("ยิง random ขัดใจคน")
+    .setDescription("ยิง random ขัดใจคน"),
 ];
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
