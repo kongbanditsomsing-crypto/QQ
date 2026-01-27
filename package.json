@@ -1,15 +1,14 @@
 {
   "name": "bot",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
     "register": "node register-command.js",
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.13.0",
-    "@discordjs/rest": "^1.6.0",
-    "discord-api-types": "^0.37.61",
-    "dotenv": "^16.0.3"
+    "discord.js": "^14.14.1",
+    "@discordjs/voice": "^0.17.0",
+    "dotenv": "^16.3.1"
   }
 }
