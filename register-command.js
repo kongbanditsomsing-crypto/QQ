@@ -13,7 +13,7 @@ const commands = [
       o.setName("text").setDescription("ข้อความ").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
+      o.setName("count").setDescription("จำนวน สูงสุด999999")
     ),
 
   new SlashCommandBuilder()
@@ -23,7 +23,7 @@ const commands = [
       o.setName("emoji").setDescription("emoji").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
+      o.setName("count").setDescription("จำนวน สูงสุด999999")
     )
     .addIntegerOption(o =>
       o.setName("delay").setDescription("delay ms")
@@ -42,7 +42,7 @@ const commands = [
     .setDescription("ยิงโปรโมท ยิงน้อยพ่องตาย")
     .addIntegerOption(o =>
       o.setName("amount")
-       .setDescription("จำนวนห้อง")
+       .setDescription("จำนวนห้อง สูงสุด1000")
        .setRequired(true)
        .setMinValue(1)
        .setMaxValue(1000) // ให้ 1000 max เผื่ออยากเพิ่มทีหลัง
