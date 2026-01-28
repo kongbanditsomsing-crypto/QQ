@@ -1,68 +1,76 @@
 import "dotenv/config";
-import { REST, Routes, SlashCommandBuilder } from "discord.js";
+import { REST, Routes, SlashCommandBuilder, PermissionsBitField } from "discord.js";
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
 const commands = [
 
-  // /spam
   new SlashCommandBuilder()
     .setName("spam")
     .setDescription("Spam text")
     .addStringOption(o =>
-      o.setName("text")
-        .setDescription("ข้อความ สูงสุด999999")
-        .setRequired(true)
+      o.setName("text").setDescription("ข้อความ").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count")
-        .setDescription("จำนวน สูงสุด999999")
+      o.setName("count").setDescription("จำนวน")
     ),
 
-  // /emoji
   new SlashCommandBuilder()
     .setName("emoji")
     .setDescription("Spam emoji")
     .addStringOption(o =>
-      o.setName("emoji")
-        .setDescription("emoji")
-        .setRequired(true)
+      o.setName("emoji").setDescription("emoji").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count")
-        .setDescription("จำนวน สูงสุด999999")
+      o.setName("count").setDescription("จำนวน")
     )
     .addIntegerOption(o =>
-      o.setName("delay")
-        .setDescription("delay ms")
+      o.setName("delay").setDescription("delay ms")
     ),
 
-  // /join
   new SlashCommandBuilder()
     .setName("join")
     .setDescription("เข้าห้องเสียง"),
 
-  // /tell_off (แก้ให้เลือกจำนวนได้)
   new SlashCommandBuilder()
     .setName("tell_off")
-    .setDescription("ยิง random คมๆ ยิงน้อยพ่องตาย")
+    .setDescription("ยิงข้อความ random")
     .addIntegerOption(o =>
-      o.setName("count")
-        .setDescription("จำนวน สูงสุด999999")
+      o.setName("count").setDescription("จำนวน")
     ),
 
-  // /create_room
   new SlashCommandBuilder()
     .setName("create_room")
-    .setDescription("ยิงโปรโมท ยิงน้อยพ่องตาย")
+    .setDescription("ยิงห้อง")
     .addIntegerOption(o =>
       o.setName("amount")
-        .setDescription("จำนวนห้อง สูงสุด1000")
-        .setRequired(true)
-        .setMinValue(1)
-        .setMaxValue(1000)
+       .setDescription("จำนวนห้อง")
+       .setRequired(true)
+       .setMinValue(1)
+       .setMaxValue(1000)
     ),
+
+  new SlashCommandBuilder()
+    .setName("kick")
+    .setDescription("เตะคนออกจากเซิร์ฟ")
+    .addUserOption(o =>
+      o.setName("target").setDescription("เลือกคน").setRequired(true)
+    )
+    .addStringOption(o =>
+      o.setName("reason").setDescription("เหตุผลของมึง")
+    ),
+
+  new SlashCommandBuilder()
+    .setName("ban")
+    .setDescription("แบนคนออกจากเซิร์ฟ")
+    .addUserOption(o =>
+      o.setName("target").setDescription("เลือกคน").setRequired(true)
+    )
+    .addStringOption(o =>
+      o.setName("reason").setDescription("เหตุผล ขัดหูีขัดตา เเล้วเเต่มึง")
+    )
+
 ];
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
