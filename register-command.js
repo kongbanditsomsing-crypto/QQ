@@ -1,9 +1,3 @@
-import "dotenv/config";
-import { REST, Routes, SlashCommandBuilder, PermissionsBitField } from "discord.js";
-
-const TOKEN = process.env.DISCORD_TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
-
 const commands = [
 
   new SlashCommandBuilder()
@@ -13,7 +7,7 @@ const commands = [
       o.setName("text").setDescription("ข้อความ").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
+      o.setName("count").setDescription("จำนวน สูงสุด999999")
     ),
 
   new SlashCommandBuilder()
@@ -37,7 +31,7 @@ const commands = [
     .setName("tell_off")
     .setDescription("ยิงข้อความ random")
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
+      o.setName("count").setDescription("จำนวน สูงสุด999999")
     ),
 
   new SlashCommandBuilder()
@@ -45,7 +39,7 @@ const commands = [
     .setDescription("ยิงห้อง")
     .addIntegerOption(o =>
       o.setName("amount")
-       .setDescription("จำนวนห้อง")
+       .setDescription("จำนวนห้อง สูงสุด1000")
        .setRequired(true)
        .setMinValue(1)
        .setMaxValue(1000)
@@ -69,21 +63,25 @@ const commands = [
     )
     .addStringOption(o =>
       o.setName("reason").setDescription("เหตุผล ขัดหูีขัดตา เเล้วเเต่มึง")
+    ),
+
+  // ============ เพิ่มใหม่ ============
+  new SlashCommandBuilder()
+    .setName("dm")
+    .setDescription("ยิงข้อความเข้า DM")
+    .addUserOption(o =>
+      o.setName("target")
+       .setDescription("เลือกคน")
+       .setRequired(true)
+    )
+    .addStringOption(o =>
+      o.setName("text")
+       .setDescription("ข้อความที่ต้องการยิง")
+       .setRequired(true)
+    )
+    .addIntegerOption(o =>
+      o.setName("count")
+       .setDescription("จำนวน สูงสุด999999")
     )
 
 ];
-
-const rest = new REST({ version: "10" }).setToken(TOKEN);
-
-(async () => {
-  try {
-    console.log("Deploying slash commands...");
-    await rest.put(
-      Routes.applicationCommands(CLIENT_ID),
-      { body: commands }
-    );
-    console.log("Slash commands deployed.");
-  } catch (err) {
-    console.error(err);
-  }
-})();
