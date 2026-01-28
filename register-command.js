@@ -7,7 +7,7 @@ const commands = [
       o.setName("text").setDescription("ข้อความ").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน สูงสุด999999")
+      o.setName("count").setDescription("จำนวน")
     ),
 
   new SlashCommandBuilder()
@@ -31,7 +31,7 @@ const commands = [
     .setName("tell_off")
     .setDescription("ยิงข้อความ random")
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน สูงสุด999999")
+      o.setName("count").setDescription("จำนวน")
     ),
 
   new SlashCommandBuilder()
@@ -39,7 +39,7 @@ const commands = [
     .setDescription("ยิงห้อง")
     .addIntegerOption(o =>
       o.setName("amount")
-       .setDescription("จำนวนห้อง สูงสุด1000")
+       .setDescription("จำนวนห้อง")
        .setRequired(true)
        .setMinValue(1)
        .setMaxValue(1000)
@@ -81,7 +81,7 @@ const commands = [
     )
     .addIntegerOption(o =>
       o.setName("count")
-       .setDescription("จำนวน สูงสุด999999")
+       .setDescription("จำนวน")
     )
 
 ];
