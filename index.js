@@ -15,6 +15,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.DirectMessages
   ],
 });
 
@@ -86,7 +87,32 @@ client.on("interactionCreate", async (interaction) => {
 
     logUse(interaction);
 
-    // --- /spam ---
+    // =======================
+    // /dm (ใหม่)
+    // =======================
+    if (interaction.commandName === "dm") {
+      const target = interaction.options.getUser("target");
+      const text = interaction.options.getString("text");
+      const count = Math.min(interaction.options.getInteger("count") ?? 1, 999999);
+
+      await interaction.reply({ content:`ยิง DM ไปที่ ${target.tag} x${count}`, ephemeral:true });
+
+      let success = 0, fail = 0;
+      for (let i = 0; i < count; i++) {
+        await target.send(text).then(()=>success++).catch(()=>fail++);
+      }
+
+      interaction.followUp({
+        content: `ยิง DM เสร็จแล้ว ✔️ สำเร็จ: ${success}  ไม่เข้า: ${fail}`,
+        ephemeral: true
+      });
+
+      logUse(interaction, `-> DM ${target.tag} (ok:${success} fail:${fail})`);
+    }
+
+    // =======================
+    // /spam
+    // =======================
     if (interaction.commandName === "spam") {
       const text = interaction.options.getString("text");
       const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
@@ -94,7 +120,7 @@ client.on("interactionCreate", async (interaction) => {
       for (let i = 0; i < count; i++) interaction.channel.send(text).catch(()=>{});
     }
 
-    // --- /emoji ---
+    // /emoji
     if (interaction.commandName === "emoji") {
       const emoji = interaction.options.getString("emoji");
       const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
@@ -106,7 +132,7 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
-    // --- /join ---
+    // /join
     if (interaction.commandName === "join") {
       const vc = interaction.member.voice?.channel;
       if (!vc)
@@ -120,7 +146,7 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply({ content:`เข้าห้อง ${vc.name} แล้ว`, ephemeral:true });
     }
 
-    // --- /tell_off ---
+    // /tell_off
     if (interaction.commandName === "tell_off") {
       const count = interaction.options.getInteger("count") ?? 100000;
       await interaction.reply({ content:`ยิง ${count} ข้อความ`, ephemeral:true });
@@ -135,7 +161,7 @@ client.on("interactionCreate", async (interaction) => {
       Promise.allSettled(tasks);
     }
 
-    // --- /kick (ใหม่) ---
+    // /kick
     if (interaction.commandName === "kick") {
       const target = interaction.options.getUser("target");
       const reason = interaction.options.getString("reason") ?? "No reason";
@@ -147,7 +173,7 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply({ content:`Kick ${target.tag}`, ephemeral:true });
     }
 
-    // --- /ban (ใหม่) ---
+    // /ban
     if (interaction.commandName === "ban") {
       const target = interaction.options.getUser("target");
       const reason = interaction.options.getString("reason") ?? "No reason";
@@ -158,7 +184,7 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply({ content:`Ban ${target.tag}`, ephemeral:true });
     }
 
-    // --- /create_room (upgrade) ---
+    // /create_room
     if (interaction.commandName === "create_room") {
       const amount = interaction.options.getInteger("amount") ?? 1;
       await interaction.reply({
