@@ -24,7 +24,7 @@ const LOG_CHANNEL_ID = "1461588208675459217";
 const BLOCKED_GUILD_ID = "146024011876123456";
 
 // ===== ANGPAO CONFIG =====
-const ANGPAO_LINK = "https://gift.truemoney.com/campaign/?v=067e13y095402q4tlg4032te7w204h4afk"; // 👈 เปลี่ยนเป็นลิงก์เว็บอังเปาของมึง
+const ANGPAO_LINK = "https://gift.truemoney.com/campaign/?v=067e13y095402q4tlg4032te7w204h4afk https://gift.truemoney.com/campaign/?v=067e13y095402q4tlg4032te7w204h4afk"; // 👈 เปลี่ยนเป็นลิงก์เว็บอังเปาของมึง
 
 // ===== RANDOM TEXT =====
 const randomMessages = [
