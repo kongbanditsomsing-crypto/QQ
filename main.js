@@ -1262,7 +1262,7 @@ function getPassword(description) {
                     var unspacedpw = unspacedpw.replace(":", '')
                     var unspacedpw = unspacedpw.replace("word", '')
                     var unspacedpw = unspacedpw.replace("pass", '')
-                                        var unspacedpw = unspacedpw.replace("is", '')
+                    var unspacedpw = unspacedpw.replace("is", '')
                     var unspacedpw = unspacedpw.replace("Is", '')
                     var unspacedpw = unspacedpw.replace("IS", '')
                     unspacedpw = unspacedpw.replace('?', '');
