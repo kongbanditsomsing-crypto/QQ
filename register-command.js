@@ -10,10 +10,10 @@ const commands = [
     .setName("spam")
     .setDescription("Spam text")
     .addStringOption(o =>
-      o.setName("text").setDescription("ข้อความ").setRequired(true)
+      o.setName("text").setDescription("ข้อความ สูงสุด999999").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
+      o.setName("count").setDescription("จำนวน สูงสุด999999")
     ),
 
   new SlashCommandBuilder()
@@ -23,7 +23,7 @@ const commands = [
       o.setName("emoji").setDescription("emoji").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
+      o.setName("count").setDescription("จำนวน สูงสุด999999")
     )
     .addIntegerOption(o =>
       o.setName("delay").setDescription("delay ms")
@@ -37,7 +37,7 @@ const commands = [
     .setName("tell_off")
     .setDescription("ยิงข้อความ random")
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
+      o.setName("count").setDescription("จำนวน สูงสุด999999")
     ),
 
   new SlashCommandBuilder()
@@ -81,10 +81,17 @@ const commands = [
       o.setName("text").setDescription("ข้อความ").setRequired(true)
     )
     .addIntegerOption(o =>
-      o.setName("count").setDescription("จำนวน")
-    )
+      o.setName("count").setDescription("จำนวน สูงสุด999999")
+    ),
 
-];
+  // =======================
+  // /angpao ⭐ เพิ่มใหม่
+  // =======================
+  new SlashCommandBuilder()
+    .setName("angpao")
+    .setDescription("เจนลิ้งเปาาา (ด่าา~)")
+
+].map(cmd => cmd.toJSON());
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
