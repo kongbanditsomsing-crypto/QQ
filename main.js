@@ -702,4 +702,564 @@ function clearAllInstances(){
 }
 
 
-var jjd = "Zz4puTs%3D1Zv7t
+var jjd = "Zz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpT"
+
+
+function startTwitter(handle){
+    if(instances[handle]==undefined){
+        startMonitorInstance(handle)
+        console.log('Monitoring @'+handle )
+    }else{
+        console.log('already monitoring @ '+ handle )
+    }
+    updateTotalAccounts()
+}
+
+
+
+function stopMonitorInstance(handle){
+    if(instances[handle] != undefined){
+        console.log('Cleared @'+handle )
+        clearInterval(instances[handle].info)
+        instances[handle].oldIDs = []
+        instances[handle].newID = []
+        instances[handle]= ''
+        var newInstances = []
+        for(strName in instances){
+            if(strName != handle){
+                newInstances[strName] = instances[strName]
+            }
+        }
+        instances = newInstances
+    }
+    //console.log(newInstances)
+    updateTotalAccounts()
+
+}
+
+
+ipcMain.on('stop:twitter', function(e, handle){
+    stopMonitorInstance(handle)
+    //console.log(handle)
+})
+
+
+function loadSettings(settings){
+    mainWindow.webContents.send('load:settings',settings);
+}
+
+function saveSettings(settingsNew){
+    global.settings = settingsNew
+    console.log(global.settings)
+}
+
+
+
+
+ipcMain.on('save:settings', function(e, settings){
+    saveSettings(settings)
+    console.log(settings)
+    storage.set('settings', settings)
+})
+
+
+
+
+
+
+
+
+
+ipcMain.on('clear:channel',function(e, channelId){
+    ChannelLinks = []
+})
+
+
+
+
+
+ipcMain.on('remove:channel',function(e, channelId){
+    const index = ChannelLinks.indexOf(channelId)
+    if (index > -1) {
+        ChannelLinks.splice(index, 1);
+      }
+
+})
+
+
+
+ipcMain.on('add:channel',function(e, channelId){
+    ChannelLinks.push(channelId)
+
+})
+
+
+ipcMain.on('add:positiveKeyword',function(e, keyword){
+    PositiveKeywords.push(keyword)
+
+})
+
+
+ipcMain.on('add:negativeKeyword',function(e, keyword){
+    NegativeKeywords.push(keyword)
+
+})
+
+
+ipcMain.on('remove:positiveKeyword',function(e, keyword){
+    const index = PositiveKeywords.indexOf(keyword)
+    if (index > -1) {
+        PositiveKeywords.splice(index, 1);
+      }
+
+})
+
+
+ipcMain.on('remove:negativeKeyword',function(e, keyword){
+    const index = NegativeKeywords.indexOf(keyword)
+    if (index > -1) {
+        NegativeKeywords.splice(index, 1);
+      }
+})
+
+
+
+ipcMain.on('start:discordMonitoring', function(e){
+    startDiscordMonitor(global.settings.monitorToken)
+})
+
+
+function startDiscordMonitor(Token) {
+    var bot = new Eris(Token);
+
+        bot.on("messageCreate", (msg) => {
+        channelID = msg.channel.id
+        if(ChannelLinks.includes(channelID) || ChannelLinks.includes('all')){
+            try {
+                EmbedCheck = msg.embeds[0].title
+                contentArray = []
+                contentArray.push(msg.content)
+                contentArray.push(msg.embeds[0].description)
+                iterate = true
+                fieldIndex = 0
+                while (iterate == true) {
+                    try {
+                        var content = msg.embeds[0].fields[fieldIndex].value
+                        contentArray.push(content + '\n')
+                    } catch {
+                        iterate = false
+                    }
+                    fieldIndex += 1
+                }
+                try {
+                    contentArray.push(msg.embeds[0].url)
+                } catch {
+                    embedurl = undefined
+                }
+                var content = contentArray.join(' ');
+            } catch (error) {
+                content = msg.content
+            }
+            includesPositives = false
+            for (i = 0; i < PositiveKeywords.length; i++) {
+                if((content.toLowerCase()).includes(PositiveKeywords[i])){
+                    includesPositives = true
+                }
+            }
+            includesNegatives = false
+            for (i = 0; i < NegativeKeywords.length; i++) {
+                if((content.toLowerCase()).includes(NegativeKeywords[i])){
+                    includesNegatives = true
+                }
+            }
+            if(includesPositives || PositiveKeywords.length == 0){
+                if(includesNegatives != true){
+                    //mainDiscord()
+                    var settings = global.settings
+                    messageInfo = {}
+                    if(msg.author.avatar == null){messageInfo.userPfp = "https://discordapp.com/assets/6debd47ed13483642cf09e832ed0bc1b.png"}
+                    else{messageInfo.userPfp = `https://cdn.discordapp.com/avatars/${msg.author.id}/${msg.author.avatar}.webp?size=256`}
+                    messageInfo.name = msg.author.username
+                    messageInfo.username = msg.author.username+'#'+msg.author.discriminator
+                    console.log(msg)
+                    try{
+                        if(msg.member != null){
+                            messageInfo.messageSource = "discord://discordapp.com/channels/"+msg.member.guild.id+"/"+msg.channel.id+"/"+msg.id
+                        }else{
+                            messageInfo.messageSource = "discord://discordapp.com/channels/@me/"+msg.channel.id+"/"+msg.id
+                        }
+                    }catch{
+                        messageInfo.messageSource = ""
+                    }
+
+                    messageInfo.content = content
+
+                    let possiblePass = getPassword(content)
+                    if(possiblePass != undefined){messageInfo.pass = possiblePass}
+                    else{messageInfo.pass = undefined}
+
+                    let possibleLinks = detectLinks(content)
+                    if(possibleLinks != null){messageInfo.links = possibleLinks}
+                    else{messageInfo.links = undefined}
+                    console.log(messageInfo)
+                    mainWindow.webContents.send('new:discordMessage',messageInfo)
+                    if(settings.joinDiscords){
+                        discordJoiner(content, msg)
+                    }     
+                    if(settings.passwordCopy){
+                        if(possiblePass != undefined){
+                            copy(possiblePass)
+                        }
+                    }
+
+                    if(settings.openLinks){
+                        openLinks(content,possiblePass)
+                    }     
+                }
+        }
+       }
+        })
+    botInstanceLinks = bot.connect()
+    ipcMain.on('stop:discordMonitoring', function(e){
+        try{stopMain()}catch(e){console.log(e)}
+    })
+
+    function stopMain() {
+        bot.disconnect()
+    }    
+}
+
+
+
+
+ipcMain.on('start:nitroMonitoring', function(e){
+    startNitroMonitor(global.settings.monitorToken)
+})
+
+
+
+function startNitroMonitor(Token) {
+    var settings = global.settings
+    // Creates Bot Instance with token
+
+        var botNitro = new Eris(Token);
+
+        // Whenever a message is created, checks if message is in channel ID
+        keys = ["discord.com/gifts/", "discord.gift/"] 
+        botNitro.on("messageCreate", (msg) => {
+        content = msg.content
+                for (let x of keys) {
+                        if (content.includes(x)) {
+                if(settings.claimerTokens != []){
+                    claimToken = settings.claimerTokens[0]
+                }else{
+                    claimToken = settings.monitorToken
+                }
+                                xx = content.split(x)
+                var code = 'https://ptb.discordapp.com/api/v6/entitlements/gift-codes/' + xx[1] + "/redeem"
+                var date = new Date();
+                var firstStamp = date.getTime();
+                                fetch(code, {
+                                        "headers": {
+                                                "authorization": claimToken
+                                        },
+                                        "body": null,
+                                        "method": "POST",
+                                        "mode": "cors"
+                                }).then(body => {
+                    nitroInfo = {}
+                    nitroInfo.gifturl = "https://discord.gift/"+xx[1]
+                    var date = new Date();
+                    var secondStamp = date.getTime();
+                    nitroInfo.claimTime = secondStamp - firstStamp
+                    if(msg.author.avatar == null){nitroInfo.userPfp = "https://discordapp.com/assets/6debd47ed13483642cf09e832ed0bc1b.png"}
+                    else{nitroInfo.userPfp = `https://cdn.discordapp.com/avatars/${msg.author.id}/${msg.author.avatar}.webp?size=256`}
+                    nitroInfo.name = msg.author.username
+                    nitroInfo.username = msg.author.username+'#'+msg.author.discriminator
+                    try{
+                        nitroInfo.server = msg.member.guild.name
+                        nitroInfo.channel = msg.channel.name
+                        if(msg.member.guild.icon != null){
+                            nitroInfo.serverImgLink = "https://cdn.discordapp.com/icons/"+msg.member.guild.id+"/"+msg.member.guild.icon+".webp?size=256"
+                        }else{
+                            nitroInfo.serverImgLink = `https://discordapp.com/assets/6debd47ed13483642cf09e832ed0bc1b.png`
+                        }
+                    }catch{
+                        nitroInfo.server = "DM"
+                        nitroInfo.channel = "bruh in your dm"
+                        nitroInfo.serverImgLink = `https://discordapp.com/assets/6debd47ed13483642cf09e832ed0bc1b.png`
+                    }
+                    try{
+                        if(msg.member != null){
+                            nitroInfo.messageSource = "discord://discordapp.com/channels/"+msg.member.guild.id+"/"+msg.channel.id+"/"+msg.id
+                        }else{
+                            nitroInfo.messageSource = "discord://discordapp.com/channels/@me/"+msg.channel.id+"/"+msg.id
+                        }
+                    }catch{
+                        nitroInfo.messageSource = ""
+                    }
+                    console.log(body.status)
+                    console.log(claimToken)
+                    console.log(body)
+                    if(body.status == 200){
+                        nitroInfo.validNitro = true
+                    }else{
+                        nitroInfo.validNitro = false
+                    }
+                    nitroInfo.joinStatus = body.status
+
+
+                    var dateObject = new Date(parseFloat(msg.timestamp))
+                    var humanDateFormat = dateObject.toLocaleString("en-US", {timeZoneName: "short"})
+                    humanDateFormat = humanDateFormat.split(",");
+
+                    nitroInfo.time = (humanDateFormat[1]).trim()
+                    nitroInfo.date = (humanDateFormat[0]).trim()
+                    sendWebhook("Nitro Redeemed", nitroInfo.joinStatus, nitroInfo )
+                    mainWindow.webContents.send('new:nitroMessage',nitroInfo)
+                    /*
+                                        joinStatus = body.status
+                                        console.log(joinStatus)
+                                        nitroMessage.server = msg.member.guild.name
+                                        nitroMessage.channel = msg.channel.name
+                    nitroMessage.usersent = msg.author.username
+                    */
+                                        //sendWebhook("Nitro Redeeming", joinStatus, code)
+
+                                })
+                        }
+                }
+    })
+    botInstanceNitro = botNitro.connect()
+    ipcMain.on('stop:nitroMonitoring', function(e){
+        try{stopNitroMain()}catch(e){console.log(e)}
+    })
+
+    function stopNitroMain() {
+        botNitro.disconnect()
+    }   
+}
+
+
+
+
+
+global.oldOpenedLinks = []
+
+
+function clearLink(link){
+    const index = global.oldOpenedLinks.indexOf(link)
+    if (index > -1) {
+        global.oldOpenedLinks.splice(index, 1);
+        console.log('cleared: '+link)
+      }
+
+}
+
+
+ipcMain.on('clear:links',function(e){
+    global.oldOpenedLinks = []
+    console.log('linksCleared')
+})
+
+
+
+
+function openLinks(message, possiblePass){
+    var settings = global.settings
+    let re = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gm
+
+    if(message.match(re) != null){
+        for (index = 0; index < message.match(re).length; index++) { 
+            var link = message.match(re)[index]
+            if(global.oldOpenedLinks.includes(link) == false){
+
+                if(link.includes("https://twitter") == false && link.includes("https://t.co") == false && link.includes("https://pbs.twimg.com") == false){
+                    /*
+                            opn(link)
+                            
+                            global.oldOpenedLinks.push(link)
+                            console.log(settings.secondsAmount)
+                            setTimeout(function(){ clearLink(link) },parseInt(settings.secondsAmount)*1000)
+      
+                */
+
+                            if(settings.appendLinkPass){
+                                if(possiblePass != undefined){
+                                    opn(link)
+                                    //opn(link, {app: ['chrome', '--profile-directory=Profile 42']})
+                                    //opn(link, {app: ['chrome', '--profile-directory=Default']})
+
+                                    global.oldOpenedLinks.push(link)
+                                    console.log(settings.secondsAmount)
+                                    setTimeout(function(){ clearLink(link) },parseInt(settings.secondsAmount)*1000)
+
+                                    sendWebhook("Opened Link","openedFromDiscord", link+possiblePass )
+
+                                    //opn("https://bruh.com", {app: ['google chrome', '--profile-directory=User1']})
+                                }else{
+                                  opn(link)
+                                  //opn(link, {app: ['chrome', '--profile-directory=Profile 42']})
+                                  //opn(link, {app: ['chrome', '--profile-directory=Default']})
+
+                                    global.oldOpenedLinks.push(link)
+                                    console.log(settings.secondsAmount)
+                                    setTimeout(function(){ clearLink(link) },parseInt(settings.secondsAmount)*1000)
+
+                                    sendWebhook("Opened Link","openedFromDiscord", link )
+
+                                }
+                            }else{
+                              opn(link)
+                              //opn(link, {app: ['chrome', '--profile-directory=Profile 42']})
+                              //opn(link, {app: ['chrome', '--profile-directory=Default']})
+
+                                //opn(link, {app: ['google chrome', '--profile-directory=User']})
+                                global.oldOpenedLinks.push(link)
+                                console.log(settings.secondsAmount)
+                                setTimeout(function(){ clearLink(link) },parseInt(settings.secondsAmount)*1000)
+
+                                sendWebhook("Opened Link","openedFromDiscord", link )
+
+                            }
+                }
+
+
+            }
+        }
+    }
+
+
+
+
+
+
+    /*
+    
+    
+    
+    
+    
+    
+    
+    if(message.includes("https://twitter") == false){
+        if(message.includes("https://t.co") == false){
+            if(message.includes("https://pbs.twimg.com") == false){
+            if(message.match(re) != null){
+                for (index = 0; index < message.match(re).length; index++) { 
+                    var link = message.match(re)[index]
+                    if(oldLinks.length < 2){
+                        if(oldLinks.includes(link) == false){
+                            if(settings.appendLinkPass){
+                                if(possiblePass != undefined){
+                                    opn(link + possiblePass)
+                                    sendWebhook("Opened Link","openedFromDiscord", link+possiblePass )
+                                    
+                                    //opn("https://bruh.com", {app: ['google chrome', '--profile-directory=User1']})
+                                }else{
+                                    opn(link)
+                                    sendWebhook("Opened Link","openedFromDiscord", link )
+                    
+                                }
+                            }else{
+                                opn(link);
+                                sendWebhook("Opened Link","openedFromDiscord", link )
+
+                            }
+                            
+                            oldLinks.push(link)
+                        }
+                    }else{
+                        oldLinks.shift()
+                        if(oldLinks.includes(link)==false){
+                            if(settings.appendLinkPass){
+                                if(possiblePass != undefined){
+                                    opn(link + possiblePass)
+                                    sendWebhook("Opened Link","openedFromDiscord", link+possiblePass )
+
+                                }else{
+                                    opn(link)
+                                    sendWebhook("Opened Link","openedFromDiscord", link )
+
+                                }
+                            }else{
+                                opn(link);
+                                sendWebhook("Opened Link","openedFromDiscord", link )
+
+                            }
+                            oldLinks.push(link)
+                        }
+                    }
+                    
+                    
+                    //rewrite
+                } 
+            }
+            }
+    }
+    }*/
+}
+
+
+
+
+
+function detectLinks(message){
+    let re = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gm
+    if(message.match(re) != null){
+        return message.match(re)
+    }else{
+        return null
+    }
+}
+
+
+function checkForMainToken(){
+    storage.get('key', function(error, data) {
+        if(data != {}){
+            request({
+                method: 'GET',
+                uri: 'https://dash.lotus.llc/api/v1/activations/'+data,
+                headers: {'Authorization':'Bearer ak_WkJ_xxGcxT5AwKcRHZz1'},
+                },
+                function (err, response, body) {
+                    if (err) {
+                        console.log(err)
+                    }
+                    if(response.statusCode == 200){
+                    }else{
+                        mainWindow.close()
+                    }
+                }
+            )
+        }else{
+            mainWindow.close()
+        }
+    })
+}
+
+
+function getPassword(description) {
+    try{
+        description = description.split(' ')
+        var keywords = ['Password', 'Pass', 'Password Is', 'Password:', 'pass', 'password:', 'password is', 'PW', 'PW:', 'pW', 'Pw', 'pw', 'pw:', 'Password Below', 'Password=', 'password=', 'Password =', 'password =']
+        for(let desItem of description){
+            for (let x of keywords) {
+                var fields = desItem.split(x);
+                //console.log("Running For Password: "+fields)
+                tripped = false
+                if (fields[1] != undefined && tripped == false) {
+                    tripped = true
+                    var desIndex = description.indexOf(desItem)
+                    spacedpw = description[desIndex+1]
+                    /*
+                    fields.shift()
+                    var spacedpw = fields[0]
+                    var spacedpw = spacedpw.split(/\n/g)
+                    var spacedpw = spacedpw[0]
+                    */
+                    var unspacedpw = spacedpw.replace(/ /g, '')
+                    var unspacedpw = unspacedpw.replace(":", '')
+                    var unspacedpw = unspacedpw.replace("word", '')
+                    var unspacedpw = unspacedpw.replace("pass", '')
+                    var u
