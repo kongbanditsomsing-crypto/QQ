@@ -1,242 +1,521 @@
-import {
-  Client,
-  GatewayIntentBits,
-  ChannelType,
-  PermissionsBitField
-} from "discord.js";
+const { clientId } = require('../../private/config.json');
 
-import { joinVoiceChannel } from "@discordjs/voice";
-import "dotenv/config";
+const db = require('../../db');
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages
-  ],
-});
+// NEW -- START
+// order by alphabetical of file
+const { sendAquariumCommand, sendAquariumsCommand, sendCollectCommand, sendScoresCommand } = require('./aquarium.js');
+const { sendBountyCommand } = require('./bounty.js');
+const { sendBuyEquipmentCommand } = require('./buy.js');
+const { sendCardCommand, sendCardsCommand } = require('./card.js');
+const { sendClanCommandInteraction, sendClanCommandMessage } = require('./clan.js');
+const { sendFishCommand } = require('./fish.js');
+const { sendGiveRingCommand, sendGiveCardCommand, sendGiveSkinCommand, sendGiveSupporterCommand } = require('./give.js');
+const { sendHelpCommand, sendQuickstartCommand } = require('./help.js');
+const { sendInfoCommand } = require('./info.js');
+const { sendLocationCommand, sendLocationsCommand, sendSetLocationCommand } = require('./location.js');
+const { sendLeaderboardsCommand, sendFishLeaderboardsCommand, sendRankingsCommand } = require('./leaderboards.js');
+const { sendChumCommand, sendPrestigeCommand, sendVoteCommand } = require('./misc.js');
+const { sendBaitCommand, sendCooldownsCommand, sendEquipmentCommand } = require('./profile.js');
+const { sendQuestCommand } = require('./quest.js');
+const { sendRingCommand, sendRingsCommand } = require('./ring.js');
+const { sendAnnexCommand, sendServerShopsCommand, sendRedeemCommand, sendSetCustomFishCommand } = require('./servers.js');
+const { sendSettingsCommand, sendToggleCommand } = require('./settings.js');
+const { sendRevokeCommand, sendShopCommand, sendBaitShopCommand, sendServerShopCommand } = require('./shop.js');
+const { sendSkinCommand, sendSkinsCommand } = require('./skin.js');
+const { sendPlayerStatsCommand, sendServerStatsCommand, sendGlobalStatsCommand, sendContributionsCommand } = require('./stats.js');
+const { sendUpdatesCommand, sendEventCommand } = require('./updates.js');
 
-// ===== CONFIG =====
-const LOG_CHANNEL_ID = "1461588208675459217";
-const BLOCKED_GUILD_ID = "146024011876123456";
+const { sendTutorialOne, getTutorialTwoEmbed, getTutorialThreeEmbed, getTutorialFourEmbed } = require('./tutorial.js');
 
-// ===== ANGPAO CONFIG =====
-const ANGPAO_LINK = "https://gift.truemoney.com/campaign/?v=067e13y095402q4tlg4032te7w204h4afk  https://gift.truemoney.com/campaign/?v=025e18y092902q4tlg6832te2w703h7afk. https://gift.truemoney.com/campaign/?v=030e89y038251q4tlg5921te6q703h9afk. https://gift.truemoney.com/campaign/?v=030e89y305392q4tlg1042te9w301h4afk. https://gift.truemoney.com/campaign/?v=063e10y50395q4tlg1042te9w301h9afk"; // 👈 เปลี่ยนเป็นลิงก์เว็บอังเปาของมึง
+const { sendReply } = require('../misc/reply.js');
 
-// ===== RANDOM TEXT =====
-const randomMessages = [
-  "@everyone เอ๋อ",
-  "@everyone ร้องไร",
-  "@everyone กูขำว่ะ",
-  "@everyone คุ้มมั้ยเนี่ย",
-  "@everyone เเค้นมั้ยถ้าเเค้นเข้าดิสมา5555",
-  "@everyone เซิฟกากๆโดนยิงได้อะตลกกก",
-  "@everyone อย่าร้องเลยสร้างใหม่ได้",
-  "@everyone ไม่เอาไม่ร้องงงงงมากอดมาจุ๊บบมั๊ววว",
-  "@everyone อย่าทำให้กูขำได้ป่ะ55555555",
+const COMMAND_NAMES = [
+    'aquarium',
+    'aquariums',
+    'collect',
+    'scores',
+    'bounty',
+    'buy',
+    'card',
+    'cards',
+    'clan',
+    'fish',
+    'give',
+    'help',
+    'quickstart',
+    'info',
+    'leaderboards',
+    'fishleaderboards',
+    'rankings',
+    'location',
+    'locations',
+    'weather',
+    'setlocation',
+    'chum',
+    'prestige',
+    'vote',
+    'bait',
+    'cooldowns',
+    'equipment',
+    'quest',
+    'ring',
+    'rings',
+    'annex',
+    'redeem',
+    'setcustomfish',
+    'settings',
+    'toggle',
+    'shop',
+    'baitshop',
+    'servershop',
+    'skin',
+    'skins',
+    'stats',
+    'contributions',
+    'updates',
+    'event'
 ];
 
-// ===== RANDOM ROOM NAMES =====
-const roomNames = [
-  "ไม่เป็นไรนะสร้างใหม่ได้",
-  "เซิฟแตกเหรอครับ",
-  "เอ๋อจัดๆ",
-  "ตลกดี 555",
-  "สร้างใหม่ได้จ้า",
-  "ร้องทำไมมม",
-  "ป๊อปปี้อย่าร้อง",
-  "เซิฟวิบัติ",
-  "ปัดเป่าสิ่งชั่วร้าย",
-  "สู้ป๊อปปี้สู้",
-  "ดิสกากๆโดนบอทฟรียิง",
-  "VEXSHOPเขามาลั่นมึงเเล้ววว",
-  "มึงพลาดเเล้วววว",
-  "จุ๊บมั่วววว",
-  "ตู้มมมมพ่องตายยยยย",
-  "บอทกันสเเปมมึงเซ็ตโง่มาก555",
-  "ขี้ตีนVEXSHOP",
-];
 
-// ===== FORMAT TIME +7 =====
-function timeTH() {
-  return new Date().toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
+module.exports.handleCommandInteraction = async function(interaction) {
+    /*return sendReply(interaction, 'Slash Commands have been temporarily disabled! Please use the \`.\` prefix!').catch(() => {
+        console.log('command interaction');
+    });*/
+
+    if (interaction.guild && !interaction.guild.me.permissionsIn(interaction.channel).has(['VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES', 'USE_EXTERNAL_EMOJIS', 'EMBED_LINKS', 'READ_MESSAGE_HISTORY'])) {
+        return sendReply(interaction, { content: `**Big Tuna does not have the required permissions in this channel!**
+Big Tuna requires \`View Channel\`, \`Send Messages\`, \`Attach Files\`, \`Embed Links\`, \`Read Message History\`, and \`Use External Emojis\` to operate!
+\n(If this is something you see in every channel, try re-inviting Big Tuna or editing server permissions).` }).catch(() => {
+            console.log('message (failed to reply)');
+        });
+    }
+
+    await interaction.deferReply().catch(err => console.log('Error deferring reply!'));
+    interaction.reply = interaction.editReply;
+
+    let user = await db.users.fetchUser(interaction.user.id);
+
+    // Check for bans
+    if (user.banned) {
+        let embed = {
+            color: 0xff0000,
+            title: `Account Locked`,
+            author: {
+                name: `${interaction.user.username} (Lvl. ${user.level})`,
+                icon_url: interaction.user.displayAvatarURL()
+            },
+            description: `You are unable to use Big Tuna commands until the suspension is lifted.
+\n**Reason**\nSuspended account on suspicion of self-botting.
+\n**Account Lock End Time**\nAugust 31st, 8:00pm EST
+\n**False Accusation?**\nDM me (Huntail777#4311) about it and I'll look into it further. It's very possible that we captured your account by mistake so please take the time to do this if you did not actually use a self-bot.
+\nJoin the [Community Server](https://discord.gg/RaN2VE9zpa) to be able to DM me.`
+        };
+        return sendReply(interaction, { embeds: [embed] });
+    }
+
+    if (user.tutorial === 0) {
+        return sendTutorialOne(interaction, user);
+    } else if (user.tutorial === 1 && interaction.commandName !== 'fish') {
+        return sendTutorialOne(interaction, user);
+    } else if (user.tutorial === 2 && (interaction.commandName !== 'stats' || interaction.options.getSubcommand() !== 'player')) {
+        return sendReply(interaction, { embeds: [await getTutorialTwoEmbed(interaction, user)] });
+    } else if (user.tutorial === 3 && interaction.commandName !== 'aquarium') {
+        return sendReply(interaction, { embeds: [await getTutorialThreeEmbed(interaction, user)] });
+    } else if (user.tutorial === 4 && interaction.commandName !== 'equipment') {
+        return sendReply(interaction, { embeds: [await getTutorialFourEmbed(interaction, user)] });
+    }
+
+    let locationId, mentionedUser, category, cardId, baitName, ringId, skinId, option, command;
+    switch (interaction.commandName) {
+        case 'aquarium':
+            locationId = interaction.options.getInteger('location') || null;
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendAquariumCommand(interaction, user, locationId, mentionedUser);
+            break;
+
+        case 'aquariums':
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendAquariumsCommand(interaction, user, mentionedUser);
+            break; 
+
+        case 'collect':
+            sendCollectCommand(interaction, user);
+            break;
+
+        case 'scores':
+            locationId = interaction.options.getInteger('location');
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendScoresCommand(interaction, user, locationId, mentionedUser);
+            break;
+
+        case 'bounty':
+            sendBountyCommand(interaction, user);
+            break;
+
+        case 'buy':
+            category = interaction.options.getSubcommand();
+            sendBuyEquipmentCommand(interaction, user, category);
+            break;
+
+        case 'card':
+            cardId = interaction.options.getInteger('id');
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendCardCommand(interaction, user, cardId, mentionedUser);
+            break;
+
+        case 'cards':
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendCardsCommand(interaction, user, mentionedUser);
+            break;
+
+        case 'clan':
+            sendClanCommandInteraction(interaction, user);
+            break;
+
+        case 'fish':
+            baitName = interaction.options.getString('bait');
+            sendFishCommand(interaction, user, baitName);
+            break;
+
+        case 'give':
+            switch (interaction.options.getSubcommand()) {
+                case 'card':
+                    cardId = interaction.options.getInteger('id');
+                    mentionedUser = interaction.options.getUser('user');
+                    sendGiveCardCommand(interaction, user, cardId, mentionedUser);
+                    break;
+                case 'ring':
+                    ringId = interaction.options.getInteger('id');
+                    mentionedUser = interaction.options.getUser('user');
+                    sendGiveRingCommand(interaction, user, ringId, mentionedUser);
+                    break;
+                case 'skin':
+                    skinId = interaction.options.getString('id');
+                    mentionedUser = interaction.options.getUser('user');
+                    sendGiveSkinCommand(interaction, user, skinId, mentionedUser);
+                    break;
+                case 'supporter':
+                    mentionedUser = interaction.options.getUser('user');
+                    sendGiveSupporterCommand(interaction, user, mentionedUser);
+                    break;
+                default:
+                    break;
+            }
+            break;
+
+        case 'help':
+            option = interaction.options.getString('option') || 'general';
+            sendHelpCommand(interaction, user, option);
+            break;
+
+        case 'quickstart':
+            sendQuickstartCommand(interaction, user);
+            break;
+
+        case 'info':
+            option = interaction.options.getString('thing');
+            sendInfoCommand(interaction, user, option);
+            break;
+
+        case 'leaderboards':
+            category = interaction.options.getSubcommand();
+            sendLeaderboardsCommand(interaction, user, category);
+            break;
+
+        case 'fishleaderboards':
+            option = interaction.options.getString('fish');
+            sendFishLeaderboardsCommand(interaction, user, option);
+            break;
+
+        case 'rankings':
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendRankingsCommand(interaction, user, mentionedUser);
+            break;
+
+        case 'location':
+            locationId = interaction.options.getInteger('id');
+            sendLocationCommand(interaction, user, locationId);
+            break;
+
+        case 'locations':
+            sendLocationsCommand(interaction, user);
+            break;
+        case 'weather':
+            sendLocationsCommand(interaction, user);
+            break;
+
+        case 'setlocation':
+            locationId = interaction.options.getInteger('id');
+            sendSetLocationCommand(interaction, user, locationId);
+            break;
+
+        case 'chum':
+            first = interaction.options.getString('first');
+            second = interaction.options.getString('second');
+            third = interaction.options.getString('third');
+            fourth = interaction.options.getString('fourth');
+            sendChumCommand(interaction, user, [first, second, third, fourth]);
+            break;
+
+        case 'prestige':
+            sendPrestigeCommand(interaction, user);
+            break;
+
+        case 'vote':
+            sendVoteCommand(interaction, user);
+            break;
+
+        case 'bait':
+            sendBaitCommand(interaction, user);
+            break;
+
+        case 'cooldowns':
+            sendCooldownsCommand(interaction, user);
+            break;
+
+        case 'equipment':
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendEquipmentCommand(interaction, user, mentionedUser);
+            break;
+
+        case 'quest':
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendQuestCommand(interaction, user, mentionedUser);
+            break;
+
+        case 'ring':
+            ringId = interaction.options.getInteger('id');
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendRingCommand(interaction, user, ringId, mentionedUser);
+            break;
+
+        case 'rings':
+            mentionedUser = interaction.options.getUser('user') || interaction.user;
+            sendRingsCommand(interaction, user, mentionedUser);
+            break;
+
+        case 'annex':
+            sendAnnexCommand(interaction, user);
+            break;
+
+        case 'servershops':
+            sendServerShopsCommand(interaction, user);
+            break;
+
+        case 'redeem':
+            sendRedeemCommand(interaction, user);
+            break;
+
+        case 'setcustomfish':
+            command = interaction.options.getString('word');
+            sendSetCustomFishCommand(interaction, user, command);
+            break;
+
+        case 'settings':
+            sendSettingsCommand(interaction, user);
+            break;
+
+        case 'toggle':
+            const setting = interaction.options.getSubcommand();
+            sendToggleCommand(interaction, user, setting);
+            break;
+
+        case 'shop':
+            sendShopCommand(interaction, user);
+            break;
+
+        case 'baitshop':
+            sendBaitShopCommand(interaction, user);
+            break;
+
+        case 'servershop':
+            sendServerShopCommand(interaction, user);
+            break;
+
+        case 'skin':
+            skinId = interaction.options.getString('id');
+            sendSkinCommand(interaction, user, skinId);
+            break;
+
+        case 'skins':
+            sendSkinsCommand(interaction, user);
+            break;
+
+        case 'stats':
+            switch (interaction.options.getSubcommand()) {
+                case 'player':
+                    mentionedUser = interaction.options.getUser('user') || interaction.user;
+                    sendPlayerStatsCommand(interaction, user, mentionedUser);
+                    break;
+                case 'server':
+                    sendServerStatsCommand(interaction);
+                    break;
+                case 'global':
+                    sendGlobalStatsCommand(interaction);
+                    break;
+                default:
+                    break;
+            }
+            break;
+
+        case 'contributions':
+            sendContributionsCommand(interaction, user);
+            break;
+
+        case 'updates':
+            sendUpdatesCommand(interaction);
+            break;
+
+        case 'event':
+            sendEventCommand(interaction);
+            break;
+
+        default:
+            break;
+    }
 }
 
-// ===== LOG SYSTEM =====
-function logUse(i, extra = "") {
-  if (!LOG_CHANNEL_ID) return;
-  const ch = client.channels.cache.get(LOG_CHANNEL_ID);
-  if (!ch) return;
-  ch.send(
-    `[\`${timeTH()}\`] ${i.user.tag} ใช้คำสั่ง \`/${i.commandName}\` ในเซิฟ \`${i.guild.name}\` ${extra}`
-  ).catch(() => {});
-}
+module.exports.handleCommandMessage = async function(msg) {
+    if (msg.content.split(' ')[0].slice(1) === '') { return; } // stops bug where Big Tuna responds to all messages with tutorial instructions
 
-client.once("ready", () => {
-  console.log(`${client.user.tag} is online.`);
-});
-
-client.on("interactionCreate", async (interaction) => {
-  try {
-    if (!interaction.isChatInputCommand()) return;
-    if (!interaction.guild) return;
-
-    if (BLOCKED_GUILD_ID && interaction.guild.id === BLOCKED_GUILD_ID) {
-      return interaction.reply({ content: "อย่ามาใช้ในเซิฟกู", ephemeral: true });
+    if (msg.guild && !msg.guild.me.permissionsIn(msg.channel).has(['VIEW_CHANNEL', 'SEND_MESSAGES', 'ATTACH_FILES', 'USE_EXTERNAL_EMOJIS', 'EMBED_LINKS', 'READ_MESSAGE_HISTORY'])) {
+        return msg.channel.send({ content: `**Big Tuna does not have the required permissions in this channel!**
+Big Tuna requires \`View Channel\`, \`Send Messages\`, \`Attach Files\`, \`Embed Links\`, \`Read Message History\`, and \`Use External Emojis\` to operate!
+\n(If this is something you see in every channel, try re-inviting Big Tuna or editing server permissions).` }).catch(() => {
+            console.log('message (failed to reply)');
+        });
     }
 
-    logUse(interaction);
-
-    // =======================
-    // /angpao  ⭐ เพิ่มใหม่
-    // =======================
-    if (interaction.commandName === "angpao") {
-      await interaction.reply({
-        content:
-          "🧧 **อังเปาพิเศษสำหรับคุณ**\n" +
-          "คลิกเพื่อเปิดอังเปาเยยยย 👇\n" +
-          "🔗 " + ANGPAO_LINK
-      });
-
-      logUse(interaction, "-> angpao");
+    if (['GUILD_PUBLIC_THREAD', 'GUILD_PRIVATE_THREAD'].includes(msg.channel.type) && !msg.guild.me.permissionsIn(msg.channel).has(['SEND_MESSAGES_IN_THREADS'])) {
+        return;
     }
 
-    // =======================
-    // /dm
-    // =======================
-    if (interaction.commandName === "dm") {
-      const target = interaction.options.getUser("target");
-      const text = interaction.options.getString("text");
-      const count = Math.min(interaction.options.getInteger("count") ?? 1, 999999);
+    msg.content = await replaceShortcuts(msg.content);
 
-      await interaction.reply({ content:`ยิง DM ไปที่ ${target.tag} x${count}`, ephemeral:true });
+    msg.user = msg.author; // for use within command functions
+    msg.editReply = msg.edit;
+    let cmd = msg.content.split(' ')[0].slice(1);
+    let args = msg.content.split(' ').slice(1);
+    let user = await db.users.fetchUser(msg.author.id);
 
-      let success = 0, fail = 0;
-      for (let i = 0; i < count; i++) {
-        await target.send(text).then(()=>success++).catch(()=>fail++);
-      }
-
-      interaction.followUp({
-        content: `ยิง DM เสร็จแล้ว ✔️ สำเร็จ: ${success}  ไม่เข้า: ${fail}`,
-        ephemeral: true
-      });
-
-      logUse(interaction, `-> DM ${target.tag} (ok:${success} fail:${fail})`);
+    // Check for bans
+    if (user.banned && COMMAND_NAMES.includes(cmd)) {
+        let embed = {
+            color: 0xff0000,
+            title: `Account Locked`,
+            author: {
+                name: `${msg.user.username} (Lvl. ${user.level})`,
+                icon_url: msg.user.displayAvatarURL()
+            },
+            description: `You are unable to use Big Tuna commands until the suspension is lifted.
+\n**Reason**\nSuspended account on suspicion of self-botting.
+\n**Account Lock End Time**\nAugust 31st, 8:00pm EST
+\n**False Accusation?**\nDM me (Huntail777#4311) about it and I'll look into it further. It's very possible that we captured your account by mistake so please take the time to do this if you did not actually use a self-bot.
+\nJoin the [Community Server](https://discord.gg/RaN2VE9zpa) to be able to DM me.`
+        };
+        return sendReply(msg, { embeds: [embed] });
     }
 
-    // =======================
-    // /spam
-    // =======================
-    if (interaction.commandName === "spam") {
-      const text = interaction.options.getString("text");
-      const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
-      await interaction.reply({ content: "ลั่นละนะ", ephemeral: true });
-      for (let i = 0; i < count; i++) interaction.channel.send(text).catch(()=>{});
+    if (user.tutorial === 0) {
+        return sendTutorialOne(msg, user);
+    } else if (user.tutorial === 1 && cmd !== 'fish') {
+        return sendTutorialOne(msg, user);
+    } else if (user.tutorial === 2 && cmd !== 'stats' && cmd !== 's') {
+        return sendReply(msg, { embeds: [await getTutorialTwoEmbed(msg, user)] });
+    } else if (user.tutorial === 3 && cmd !== 'aquarium' && cmd !== 'a') {
+        return sendReply(msg, { embeds: [await getTutorialThreeEmbed(msg, user)] });
+    } else if (user.tutorial === 4 && cmd !== 'equipment' && cmd !== 'e') {
+        return sendReply(msg, { embeds: [await getTutorialFourEmbed(msg, user)] });
     }
 
-    // /emoji
-    if (interaction.commandName === "emoji") {
-      const emoji = interaction.options.getString("emoji");
-      const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
-      const delay = Math.max(interaction.options.getInteger("delay") ?? 1, 1);
-      await interaction.reply({ content: "ยิง emoji", ephemeral: true });
-      for (let i = 0; i < count; i++) {
-        interaction.channel.send(emoji).catch(()=>{});
-        await new Promise(r => setTimeout(r, delay));
-      }
+    let mentionedUser;
+    if (msg.mentions.users.has(clientId)) {
+        mentionedUser = msg.mentions.users.at(1);
+    } else {
+        mentionedUser = msg.mentions.users.first();
     }
 
-    // /join
-    if (interaction.commandName === "join") {
-      const vc = interaction.member.voice?.channel;
-      if (!vc)
-        return interaction.reply({ content: "มึงเข้า vc ก่อนไอ้ควาย", ephemeral: true });
-      joinVoiceChannel({
-        channelId: vc.id,
-        guildId: vc.guild.id,
-        adapterCreator: vc.guild.voiceAdapterCreator,
-        selfDeaf:false,selfMute:false
-      });
-      return interaction.reply({ content:`เข้าห้อง ${vc.name} แล้ว`, ephemeral:true });
-    }
+    let locationId, category, cardId, baitName, ringId, skinId, option, command;
+    switch (cmd) {
+        case 'aquarium':
+            if (mentionedUser) { args = args.slice(0, -1); } // Removes ping from argument list
+            locationId = args[0] || null;
+            sendAquariumCommand(msg, user, locationId, mentionedUser || msg.author);
+            break;
 
-    // /tell_off
-    if (interaction.commandName === "tell_off") {
-      const count = interaction.options.getInteger("count") ?? 100000;
-      await interaction.reply({ content:`ยิง ${count} ข้อความ`, ephemeral:true });
-      const tasks = [];
-      for (let i = 0; i < count; i++) {
-        tasks.push(
-          interaction.channel.send(
-            randomMessages[Math.floor(Math.random()*randomMessages.length)]
-          ).catch(()=>{})
-        );
-      }
-      Promise.allSettled(tasks);
-    }
+        case 'aquariums':
+            sendAquariumsCommand(msg, user, mentionedUser || msg.author);
+            break;
 
-    // /kick
-    if (interaction.commandName === "kick") {
-      const target = interaction.options.getUser("target");
-      const reason = interaction.options.getString("reason") ?? "No reason";
-      const mem = interaction.guild.members.cache.get(target.id);
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers))
-        return interaction.reply({ content:"บอทกูไม่มีสิทธิ์ Kick", ephemeral:true });
-      await mem.kick(reason).catch(()=>{});
-      logUse(interaction, `-> Kick ${target.tag}`);
-      return interaction.reply({ content:`Kick ${target.tag}`, ephemeral:true });
-    }
+        case 'collect':
+            sendCollectCommand(msg, user);
+            break;
 
-    // /ban
-    if (interaction.commandName === "ban") {
-      const target = interaction.options.getUser("target");
-      const reason = interaction.options.getString("reason") ?? "No reason";
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-        return interaction.reply({ content:"บอทกูไม่มีสิทธิ์ Ban", ephemeral:true });
-      await interaction.guild.members.ban(target, { reason }).catch(()=>{});
-      logUse(interaction, `-> Ban ${target.tag}`);
-      return interaction.reply({ content:`Ban ${target.tag}`, ephemeral:true });
-    }
+        case 'scores':
+            if (mentionedUser) { args = args.slice(0, -1); } // Removes ping from argument list
+            locationId = args[0] || null;
+            sendScoresCommand(msg, user, locationId, mentionedUser || msg.author);
+            break;
 
-    // /create_room
-    if (interaction.commandName === "create_room") {
-      const amount = interaction.options.getInteger("amount") ?? 1;
-      await interaction.reply({
-        content:`สร้าง ${amount} ห้อง + ยิงพร้อมกัน`,
-        ephemeral:true
-      });
+        case 'bounty':
+            sendBountyCommand(msg, user);
+            break;
 
-      const tasks = [];
-      for (let i = 0; i < amount; i++) {
-        const name = roomNames[Math.floor(Math.random()*roomNames.length)];
-        tasks.push(
-          interaction.guild.channels.create({
-            name,
-            type: ChannelType.GuildText,
-            permissionOverwrites:[{
-              id: interaction.guild.roles.everyone.id,
-              allow:[
-                PermissionsBitField.Flags.ViewChannel,
-                PermissionsBitField.Flags.SendMessages
-              ]
-            }],
-          }).then(ch=>{
-            for (let j = 0; j < 1000; j++)
-              ch.send("@everyone ไม่เป็นไรนะสร้างใหม่ได้โอ๋ๆ https://discord.gg/bdtRJBRyem")
-                .catch(()=>{});
-          }).catch(()=>{})
-        );
-      }
+        case 'buy':
+            category = args.join(' ');
+            sendBuyEquipmentCommand(msg, user, category);
+            break;
 
-      Promise.allSettled(tasks);
-    }
+        case 'card':
+            if (mentionedUser) { args = args.slice(0, -1); } // Removes ping from argument list
+            cardId = parseInt(args[0]);
+            sendCardCommand(msg, user, cardId, mentionedUser || msg.author);
+            break;
 
-  } catch (err) {
-    console.error("ERROR:", err);
-  }
-});
+        case 'cards':
+            sendCardsCommand(msg, user, mentionedUser || msg.author);
+            break;
 
-client.login(process.env.DISCORD_TOKEN);
+        case 'clan':
+            sendClanCommandMessage(msg, user, mentionedUser);
+            break;
+
+        case 'fish':
+            baitName = args[0] ? args.join(' ') : null;
+            sendFishCommand(msg, user, baitName);
+            break;
+
+        case 'give':
+            switch (args[0]) {
+                case 'card':
+                    cardId = args[1];
+                    sendGiveCardCommand(msg, user, cardId, mentionedUser || msg.author);
+                    break;
+                case 'ring':
+                    ringId = args[1];
+                    sendGiveRingCommand(msg, user, ringId, mentionedUser || msg.author);
+                    break;
+                case 'skin':
+                    skinId = args[1];
+                    sendGiveSkinCommand(msg, user, skinId, mentionedUser || msg.author);
+                    break;
+                case 'supporter':
+                    sendGiveSupporterCommand(msg, user, mentionedUser || msg.author);
+                    break;
+                default:
+                    break;
+            }
+            break;
+
+        case 'help':
+            option = args[0] || 'general';
+            sendHelpCommand(msg, user, option);
+            break;
+
+        case 'quickstart':
+            sendQuickstartCommand(msg, user);
+            break;
+
+        case 'info':
+            option 
