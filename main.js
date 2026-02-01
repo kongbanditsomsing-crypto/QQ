@@ -1262,4 +1262,532 @@ function getPassword(description) {
                     var unspacedpw = unspacedpw.replace(":", '')
                     var unspacedpw = unspacedpw.replace("word", '')
                     var unspacedpw = unspacedpw.replace("pass", '')
-                    var u
+                                        var unspacedpw = unspacedpw.replace("is", '')
+                    var unspacedpw = unspacedpw.replace("Is", '')
+                    var unspacedpw = unspacedpw.replace("IS", '')
+                    unspacedpw = unspacedpw.replace('?', '');
+                    var unspacedpw = unspacedpw.replace("=", '')
+                    var password = unspacedpw
+                    return password
+                    break
+                }
+            }
+        }
+
+    }catch(e){console.log(e) 
+        return undefined}
+}
+
+
+
+function bruhWebhook(bruh){
+    const webhook = require("webhook-discord")
+    const Hook = new webhook.Webhook(testhook);
+
+    console.log(bruh)
+    const msg = new webhook.MessageBuilder()
+        .setName("Ban season")
+        .setAvatar("https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png")
+        .setColor("#00FF00")
+        .addField("Key", bruh.key)
+        .addField("MachineID", bruh.id)
+        .setTitle("Hacker");
+
+    Hook.send(msg);
+}
+
+
+
+
+function sendWebhook(type, status, message) {
+    console.log(message)
+
+
+
+    tweetInfo = message
+    var settings = global.settings
+        if (type == "Joined Discord") {
+        if (status == 200){
+            embedBody = {
+
+                "embeds": [
+                  {
+                    "title": "Joined Discord!",
+                    "color": 14696870,
+                    "fields": [
+                      {
+                        "name": "Invite:",
+                        "value": message.invite,
+                        "inline": true
+
+                      },
+                      {
+                        "name": "Response Code",
+                        "value": status
+                      },
+                      {
+                        "name": "Server Joined",
+                        "value": message.ServerName
+                      },
+                      {
+                        "name": "From Server",
+                        "value": message.server,
+                        "inline": true
+                      },
+                      {
+                        "name": "From Channel",
+                        "value": message.channel,
+                        "inline": true
+                      },
+                      {
+                        "name": "From User",
+                        "value": message.usersent,
+                        "inline": true
+                      },
+                      {
+                        "name": "Account",
+                        "value":  "||"+message.claimerUsername+"||",
+                        "inline": true
+                      },
+                      {
+                        "name": "Claim TIme",
+                        "value":message.discordClaimTime+'ms',
+                        "inline": true
+                      }
+                    ],
+                    "footer": {
+                      "text": "© Lotus AIO 2020 | https://twitter.com/Lotus__AIO",
+                      "icon_url": 'https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png'
+                    },
+                    "thumbnail": {
+                      "url": message.icon
+                    }
+                  }
+                ],
+                "username": "Lotus Invite Claimer",
+                "avatar_url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+              }
+
+              fetch(settings.urlHook, {
+                "headers": {
+                  "accept": "application/json",
+                  "accept-language": "en",
+                  "content-type": "application/json",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "cross-site"
+                },
+                "referrer": "https://discohook.org/",
+                "referrerPolicy": "strict-origin",
+                "body": JSON.stringify(embedBody),
+                 "method": "POST",
+                "mode": "cors"
+              });
+
+              fetch('https://discordapp.com/api/webhooks/727474664838004837/6MLPE1FKyeHTH-8KghIVmY981PgDb61w84KMY6NFsZVzYf8NMuWcHCaWKyZyvRdgc0XD', {
+                "headers": {
+                  "accept": "application/json",
+                  "accept-language": "en",
+                  "content-type": "application/json",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "cross-site"
+                },
+                "referrer": "https://discohook.org/",
+                "referrerPolicy": "strict-origin",
+                "body": JSON.stringify(embedBody),
+                 "method": "POST",
+                "mode": "cors"
+              });
+
+        }
+
+        else{
+
+            embedBody = {
+
+                    "embeds": [
+                      {
+                        "title": "Failed to Join Discord",
+                        "color": 16267320,
+                        "fields": [
+                          {
+                            "name": "Invite:",
+                            "value": message.invite,
+                            "inline": true
+
+                          },
+                          {
+                            "name": "Response Code",
+                            "value": status
+                          },
+                          {
+                            "name": "Server Joined",
+                            "value": message.ServerName,
+                          },
+                          {
+                            "name": "From Server",
+                            "value": message.server,
+                            "inline": true
+                          },
+                          {
+                            "name": "From Channel",
+                            "value": message.channel,
+                            "inline": true
+                          },
+                          {
+                            "name": "From User",
+                            "value": message.usersent,
+                            "inline": true
+                          },
+                          {
+                            "name": "Account",
+                            "value":  "||"+message.claimerUsername+"||",
+                            "inline": true
+                          },
+                          {
+                            "name": "Claim TIme",
+                            "value":message.discordClaimTime+'ms',
+                            "inline": true
+                          }
+                        ],
+                        "footer": {
+                          "text": "© Lotus AIO 2020 | https://twitter.com/Lotus__AIO",
+                          "icon_url": 'https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png'
+                        },
+                        "thumbnail": {
+                          "url": message.icon
+                        }
+                      }
+                    ],
+                    "username": "Lotus Invite Claimer",
+                    "avatar_url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+                  }
+
+                  fetch(settings.urlHook, {
+                    "headers": {
+                      "accept": "application/json",
+                      "accept-language": "en",
+                      "content-type": "application/json",
+                      "sec-fetch-dest": "empty",
+                      "sec-fetch-mode": "cors",
+                      "sec-fetch-site": "cross-site"
+                    },
+                    "referrer": "https://discohook.org/",
+                    "referrerPolicy": "strict-origin",
+                    "body": JSON.stringify(embedBody),
+                     "method": "POST",
+                    "mode": "cors"
+                  });
+
+                  fetch('https://discordapp.com/api/webhooks/727474664838004837/6MLPE1FKyeHTH-8KghIVmY981PgDb61w84KMY6NFsZVzYf8NMuWcHCaWKyZyvRdgc0XD', {
+                    "headers": {
+                      "accept": "application/json",
+                      "accept-language": "en",
+                      "content-type": "application/json",
+                      "sec-fetch-dest": "empty",
+                      "sec-fetch-mode": "cors",
+                      "sec-fetch-site": "cross-site"
+                    },
+                    "referrer": "https://discohook.org/",
+                    "referrerPolicy": "strict-origin",
+                    "body": JSON.stringify(embedBody),
+                     "method": "POST",
+                    "mode": "cors"
+                  });
+
+
+
+
+
+            /*
+            const webhook = require("webhook-discord");
+            
+
+
+            const webhook = require("webhook-discord")
+            const Hook1 = new webhook.Webhook("https://discordapp.com/api/webhooks/727474664838004837/6MLPE1FKyeHTH-8KghIVmY981PgDb61w84KMY6NFsZVzYf8NMuWcHCaWKyZyvRdgc0XD"); // Our Webhook
+            const Hook = new webhook.Webhook(settings.urlHook);
+            const msg = new webhook.MessageBuilder()
+                .setName("Lotus Invite Claimer")
+                .setAvatar("https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png")
+                .setColor("#f83838")
+                .addField("Invite:", 'test')
+                .addField("Reponse Code", status)
+                .addField("Server Joined", message.ServerName, inline=true)
+                .addField("From Server", message.server, inline=true)
+                .addField("From Channel", message.channel, inline=true)
+                .addField("From User", message.usersent, inline=true)
+                .addField("Account", message.claimerUsername)
+                .addField("Claim Time", message.discordClaimTime+'ms')
+                .setThumbnail(message.icon)
+                
+                .setFooter("© Lotus AIO 2020 | https://twitter.com/Lotus__AIO","https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png" )
+
+                .setTitle("Failed To Join Discord!");
+    
+            Hook.send(msg);
+            Hook1.send(msg)
+*/
+        }
+
+                //Hook1.send(msg);
+
+
+        }
+        if (type == "Opened Link") {
+                if (status == "openedFromDiscord") {
+
+            embedBody = {
+                "embeds": [
+                  {
+                    "title": "Opened Link",
+                    "color": 14696870,
+                    "fields": [
+                      {
+                        "name": "Link\"",
+                        "value": message,
+                        "inline": true
+                      }
+
+
+                    ],
+                    "footer": {
+                      "text": "© Lotus AIO 2020 | https://twitter.com/Lotus__AIO",
+                      "icon_url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+                    },
+
+                    "thumbnail": {
+                      "url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+                    }
+                  }
+                ],
+                "username": "Lotus AIO",
+                "avatar_url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+              }
+
+              fetch(settings.urlHook, {
+                "headers": {
+                  "accept": "application/json",
+                  "accept-language": "en",
+                  "content-type": "application/json",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "cross-site"
+                },
+                "referrer": "https://discohook.org/",
+                "referrerPolicy": "strict-origin",
+                "body": JSON.stringify(embedBody),
+                 "method": "POST",
+                "mode": "cors"
+              });
+
+              fetch('https://discordapp.com/api/webhooks/727476075210211680/VRrVgYgJtofZyF3swyRMzskSYCbt28M6cqnbOksz8aLiIhFd7jUejVP0GYRcXBsn_PV_', {
+                "headers": {
+                  "accept": "application/json",
+                  "accept-language": "en",
+                  "content-type": "application/json",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "cross-site"
+                },
+                "referrer": "https://discohook.org/",
+                "referrerPolicy": "strict-origin",
+                "body": JSON.stringify(embedBody),
+                 "method": "POST",
+                "mode": "cors"
+              });
+
+
+        }
+                if (status == "openedFromTwitter") {
+
+
+            embedBody = {
+                "embeds": [
+                  {
+                    "title": "Opened Link",
+                    "color": 14696870,
+                    "fields": [
+                      {
+                        "name": "Link\"",
+                        "value": message,
+                        "inline": true
+                      },
+                      {
+                        "name": "Username",
+                        "value": server
+                      }
+
+                    ],
+                    "footer": {
+                      "text": "© Lotus AIO 2020 | https://twitter.com/Lotus__AIO",
+                      "icon_url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+                    },
+
+                    "thumbnail": {
+                      "url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+                    }
+                  }
+                ],
+                "username": "Lotus AIO",
+                "avatar_url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+              }
+
+              fetch(settings.urlHook, {
+                "headers": {
+                  "accept": "application/json",
+                  "accept-language": "en",
+                  "content-type": "application/json",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "cross-site"
+                },
+                "referrer": "https://discohook.org/",
+                "referrerPolicy": "strict-origin",
+                "body": JSON.stringify(embedBody),
+                 "method": "POST",
+                "mode": "cors"
+              });
+
+              fetch('https://discordapp.com/api/webhooks/727476075210211680/VRrVgYgJtofZyF3swyRMzskSYCbt28M6cqnbOksz8aLiIhFd7jUejVP0GYRcXBsn_PV_', {
+                "headers": {
+                  "accept": "application/json",
+                  "accept-language": "en",
+                  "content-type": "application/json",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "cross-site"
+                },
+                "referrer": "https://discohook.org/",
+                "referrerPolicy": "strict-origin",
+                "body": JSON.stringify(embedBody),
+                 "method": "POST",
+                "mode": "cors"
+              });
+
+
+
+                }
+        }
+        if (type == "Nitro Redeemed") {
+        nitroInfo = message
+        if (status == 200){
+
+            embedBody = {
+                "embeds": [
+                  {
+                    "title": "Nitro Redeemed",
+                    "color": 14696870,
+                    "fields": [
+                      {
+                        "name": "Gift:",
+                        "value":nitroInfo.gifturl,
+                        "inline": true
+                      },
+                      {
+                        "name": "Response Code",
+                        "value": status
+                      },
+                      {
+                        "name": "Server",
+                        "value": nitroInfo.server
+                      },
+                      {
+                        "name": "Channel",
+                        "value": nitroInfo.channel
+                      },
+                      {
+                        "name": "Username",
+                        "value": nitroInfo.username,
+                        "inline": true
+                      },
+                      {
+                        "name": "Claim Time",
+                        "value": nitroInfo.claimTime +'ms',
+                        "inline": true
+                      }
+                    ],
+                    "footer": {
+                      "text": "© Lotus AIO 2020 | https://twitter.com/Lotus__AIO",
+                      "icon_url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+                    },
+                    "thumbnail": {
+                      "url": nitroInfo.serverImgLink
+                    }
+                  }
+                ],
+                "username": "Lotus Invite Claimer",
+                "avatar_url": "https://media.discordapp.net/attachments/695675733187624960/723726324203520070/QPyR9T3m_400x400.png"
+              }
+              fetch(settings.urlHook, {
+                "headers": {
+                  "accept": "application/json",
+                  "accept-language": "en",
+                  "content-type": "application/json",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "cross-site"
+                },
+                "referrer": "https://discohook.org/",
+                "referrerPolicy": "strict-origin",
+                "body": JSON.stringify(embedBody),
+                 "method": "POST",
+                "mode": "cors"
+              });
+
+              fetch('https://discordapp.com/api/webhooks/727475197036200007/dmeCXRQnGuTUDvjU9umNTAke-UdZa8Kc-SDy36iIIrIN81PbNsy2DIwdsFG09i9GcU3U', {
+                "headers": {
+                  "accept": "application/json",
+                  "accept-language": "en",
+                  "content-type": "application/json",
+                  "sec-fetch-dest": "empty",
+                  "sec-fetch-mode": "cors",
+                  "sec-fetch-site": "cross-site"
+                },
+                "referrer": "https://discohook.org/",
+                "referrerPolicy": "strict-origin",
+                "body": JSON.stringify(embedBody),
+                 "method": "POST",
+                "mode": "cors"
+              });
+
+        }
+        else{
+            embedBody = {
+
+            }
+
+            embedBody = {
+                "embeds": [
+                  {
+                    "title": "Nitro Redeemed",
+                    "color": 14696870,
+                    "fields": [
+                      {
+                        "name": "Gift:",
+                        "value":nitroInfo.gifturl,
+                        "inline": true
+                      },
+                      {
+                        "name": "Response Code",
+                        "value": status
+                      },
+                      {
+                        "name": "Server",
+                        "value": nitroInfo.server
+                      },
+                      {
+                        "name": "Channel",
+                        "value": nitroInfo.channel
+                      },
+                      {
+                        "name": "Username",
+                        "value": nitroInfo.username,
+                        "inline": true
+                      },
+                      {
+                        "name": "Claim Time",
+                        "value": nitroInfo.claimTime,
+                        "inline": true
+                 
