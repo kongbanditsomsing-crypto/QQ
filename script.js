@@ -13,7 +13,7 @@ async function start() {
 
   for (let i = 1; i <= amount; i++) {
     log.innerHTML += `📨 [${i}] ส่งถึง <b>${name}</b>: ${message}<br>`;
-    await delay(1000);
+    await delay(500);
   }
 
   log.innerHTML += "<br>✅ เสร็จสิ้น";
