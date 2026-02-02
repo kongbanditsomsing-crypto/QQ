@@ -1,17 +1,8 @@
-# NGL Web Menu (Demo)
+selfbot
+To install dependencies:
 
-หน้าเว็บเมนูสำหรับกรอก
-- ชื่อ
-- ข้อความ
-- จำนวน
+bun install
+To run:
 
-ใช้สำหรับทดสอบระบบ / การเรียนรู้ JavaScript และ UI
-
-## วิธีใช้งาน
-1. ดาวน์โหลดหรือ clone repo
-2. เปิดไฟล์ `index.html`
-3. กรอกข้อมูลแล้วกดเริ่ม
-
-## หมายเหตุ
-โปรเจกต์นี้เป็นตัวอย่างฝั่ง Frontend เท่านั้น  
-สามารถนำไปต่อ backend หรือ API ที่คุณมีสิทธิ์ใช้งานได้
+bun run index.ts
+This project was created using bun init in bun v1.2.8. Bun is a fast all-in-one JavaScript runtime.
