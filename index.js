@@ -144,9 +144,3 @@ process.exit(1);
 
 // Basic error handling
 client.on('error', console.error);
-import {
-  Client,
-  GatewayIntentBits,
-  ChannelType,
-  PermissionsBitField
-} from "discord.js"
