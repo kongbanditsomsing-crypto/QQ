@@ -149,10 +149,7 @@ import {
   GatewayIntentBits,
   ChannelType,
   PermissionsBitField
-} from "discord.js";
-
-import { joinVoiceChannel } from "@discordjs/voice";
-import "dotenv/config";
+} from "discord.js"
 
 const client = new Client({
   intents: [
