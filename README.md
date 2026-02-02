@@ -1,4 +1,4 @@
-selfbot
+# selfbot
 To install dependencies:
 
 bun install
