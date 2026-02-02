@@ -1,24 +1,15 @@
-async function start() {
-  const name = document.getElementById("name").value;
-  const message = document.getElementById("message").value;
-  const amount = parseInt(document.getElementById("amount").value);
-  const log = document.getElementById("log");
+fetch("https://github.com/kongbanditsomsing-crypto/Discord-Quest-Auto-Completion-Selfbot/tree/main")
+  .then(res => res.json())
+  .then(data => {
+    console.log("ข้อมูลที่ดึงมาได้:", data);
 
-  if (!name || !message || !amount) {
-    alert("กรอกข้อมูลให้ครบ");
-    return;
-  }
-
-  log.innerHTML = "";
-
-  for (let i = 1; i <= amount; i++) {
-    log.innerHTML += `📨 [${i}] ส่งถึง <b>${name}</b>: ${message}<br>`;
-    await delay(500);
-  }
-
-  log.innerHTML += "<br>✅ เสร็จสิ้น";
-}
-
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+    // เอาไปใช้ต่อ
+    document.body.innerHTML += `
+      <p>ชื่อ: ${data.name}</p>
+      <p>ข้อความ: ${data.message}</p>
+      <p>จำนวน: ${data.amount}</p>
+    `;
+  })
+  .catch(err => {
+    console.error("ดึงไฟล์ไม่สำเร็จ", err);
+  });
