@@ -1,48 +1,34 @@
-# Compiled Lua sources
-luac.out
+# dependencies (bun install)
+node_modules
 
-# luarocks build files
-*.src.rock
-*.zip
-*.tar.gz
+# output
+out
+dist
+*.tgz
 
-# Object files
-*.o
-*.os
-*.ko
-*.obj
-*.elf
+# code coverage
+coverage
+*.lcov
 
-# Precompiled Headers
-*.gch
-*.pch
+# logs
+logs
+_.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-*.def
-*.exp
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
 
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
 
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
+# IntelliJ based IDEs
+.idea
 
-#TeleSeed Data
-data/*.*
-data/photos/*.*
-data/tmp/*.*
-!data/tmp/.gitkeep
-!data/photos/.gitkeep
-!data/.gitkeep
+# Finder (MacOS) folder config
+.DS_Store
