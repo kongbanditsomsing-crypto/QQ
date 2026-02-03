@@ -1,14 +1,12 @@
 {
   "name": "bot",
-  "version": "1.0.0",
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun index.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "discord.js-self-bot-v13": "^3.6.1",
-    "dotenv": "^16.5.0",
-    "debug": "^4.3.4"
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.5.0"
   }
 }
