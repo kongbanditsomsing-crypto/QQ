@@ -1,7 +1,7 @@
 
 {
-  "name": "selfbot",
-  "module": "index.ts",
+  "name": "bot.js",
+  "module": "node bot.js",
   "type": "module",
   "private": true,
   "devDependencies": {
