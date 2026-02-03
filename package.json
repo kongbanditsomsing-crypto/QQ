@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node bot.js"
+    "start": "bun index.ts"
   },
   "dependencies": {
     "discord.js-selfbot-v13": "^3.6.1",
