@@ -1,14 +1,9 @@
-
 {
-  "name": "bot.js",
-  "module": "node bot.js",
+  "name": "bot",
   "type": "module",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+  "scripts": {
+    "start": "node bot.js"
   },
   "dependencies": {
     "discord.js-selfbot-v13": "^3.6.1",
