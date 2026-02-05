@@ -127,7 +127,7 @@ client.on("interactionCreate", async (interaction) => {
     // =======================
     if (interaction.commandName === "spam") {
       const text = interaction.options.getString("text");
-      const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
+      const count = Math.min(interaction.options.getInteger("count") ?? 1, 999999);
       await interaction.reply({ content: "ลั่นละนะ", ephemeral: true });
       for (let i = 0; i < count; i++) interaction.channel.send(text).catch(()=>{});
     }
@@ -199,8 +199,8 @@ if (interaction.commandName === "kick") {
   });
 }
 
-    // /tell
-if (interaction.commandName === "tell") {
+    // /Send a message
+if (interaction.commandName === "ฝากบอก") {
   const text = interaction.options.getString("text");
   if (!text)
     return interaction.reply({ content: "มึงต้องใส่ข้อความ", ephemeral: true });
