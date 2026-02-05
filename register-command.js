@@ -39,6 +39,14 @@ const commands = [
     .addIntegerOption(o =>
       o.setName("count").setDescription("จำนวน สูงสุด999999")
     ),
+new SlashCommandBuilder()
+    .setName("tell")
+    .setDescription("ฝากบอกข้อความ (ไม่ระบุคนใช้)")
+    .addStringOption(o =>
+      o.setName("text")
+       .setDescription("ข้อความที่มึงต้องการฝากบอก")
+       .setRequired(true)
+    ),
 
   new SlashCommandBuilder()
     .setName("create_room")
