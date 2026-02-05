@@ -199,6 +199,24 @@ if (interaction.commandName === "kick") {
   });
 }
 
+    // /tell
+if (interaction.commandName === "tell") {
+  const text = interaction.options.getString("text");
+  if (!text)
+    return interaction.reply({ content: "มึงต้องใส่ข้อความ", ephemeral: true });
+
+  await interaction.reply({ content: "ส่งข้อความแล้ว", ephemeral: true });
+
+  await interaction.channel.send({
+    embeds: [{
+      title: "📢 ฝากบอกส่งตรงถึงมึง",
+      description: text,
+      color: 0x5865F2,
+      timestamp: new Date()
+    }]
+  });
+}
+
     // /ban
 if (interaction.commandName === "ban") {
   const target = interaction.options.getUser("target");
