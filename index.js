@@ -193,7 +193,7 @@ if (interaction.commandName === "kick") {
         { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
         { name: "เหตุผล", value: reason }
       ],
-      footer: { text: "_____" },
+      footer: { text: "by มึง" },
       timestamp: new Date()
     }]
   });
@@ -218,7 +218,7 @@ if (interaction.commandName === "ban") {
         { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
         { name: "เหตุผล", value: reason }
       ],
-      footer: { text: "____" },
+      footer: { text: "By มึง" },
       timestamp: new Date()
     }]
   });
