@@ -172,27 +172,55 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     // /kick
-    if (interaction.commandName === "kick") {
-      const target = interaction.options.getUser("target");
-      const reason = interaction.options.getString("reason") ?? "No reason";
-      const mem = interaction.guild.members.cache.get(target.id);
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers))
-        return interaction.reply({ content:"บอทกูไม่มีสิทธิ์ Kick", ephemeral:true });
-      await mem.kick(reason).catch(()=>{});
-      logUse(interaction, `-> Kick ${target.tag}`);
-      return interaction.reply({ content:`Kick ${target.tag}`, ephemeral:true });
-    }
+if (interaction.commandName === "kick") {
+  const target = interaction.options.getUser("target");
+  const reason = interaction.options.getString("reason") ?? "No reason";
+  const mem = interaction.guild.members.cache.get(target.id);
+
+  if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers))
+    return interaction.reply({ content:"มึงไม่มีสิทธิ์ เตะ กูจะรั่ว", ephemeral:true });
+
+  await mem.kick(reason).catch(()=>{});
+
+  await interaction.reply({
+    embeds: [{
+      title: "Member Kick System",
+      color: 0xffa500,
+      fields: [
+        { name: "สมาชิก", value: `<@${target.id}>`, inline: true },
+        { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
+        { name: "เหตุผล", value: reason }
+      ],
+      footer: { text: "BUFFEROVERFLOW" },
+      timestamp: new Date()
+    }]
+  });
+}
 
     // /ban
-    if (interaction.commandName === "ban") {
-      const target = interaction.options.getUser("target");
-      const reason = interaction.options.getString("reason") ?? "No reason";
-      if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-        return interaction.reply({ content:"บอทกูไม่มีสิทธิ์ Ban", ephemeral:true });
-      await interaction.guild.members.ban(target, { reason }).catch(()=>{});
-      logUse(interaction, `-> Ban ${target.tag}`);
-      return interaction.reply({ content:`Ban ${target.tag}`, ephemeral:true });
-    }
+if (interaction.commandName === "ban") {
+  const target = interaction.options.getUser("target");
+  const reason = interaction.options.getString("reason") ?? "No reason";
+
+  if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers))
+    return interaction.reply({ content:"มึงไม่มีสิทธิ์ Ban กูจะรั่ว", ephemeral:true });
+
+  await interaction.guild.members.ban(target, { reason }).catch(()=>{});
+
+  await interaction.reply({
+    embeds: [{
+      title: "Member Ban System",
+      color: 0xff0000,
+      fields: [
+        { name: "สมาชิก", value: `<@${target.id}>`, inline: true },
+        { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
+        { name: "เหตุผล", value: reason }
+      ],
+      footer: { text: "BUFFEROVERFLOW" },
+      timestamp: new Date()
+    }]
+  });
+}
 
     // /create_room
     if (interaction.commandName === "create_room") {
