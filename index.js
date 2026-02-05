@@ -199,8 +199,8 @@ if (interaction.commandName === "kick") {
   });
 }
 
-    // /VEX
-if (interaction.commandName === "VEX") {
+    // /vex
+if (interaction.commandName === "vex") {
   const text = interaction.options.getString("text");
   if (!text)
     return interaction.reply({ content: "มึงต้องใส่ข้อความ", ephemeral: true });
