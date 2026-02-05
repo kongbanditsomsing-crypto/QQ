@@ -186,14 +186,14 @@ if (interaction.commandName === "kick") {
 
   await interaction.reply({
     embeds: [{
-      title: "Member Kick System",
+      title: "Member Kick ",
       color: 0xffa500,
       fields: [
         { name: "สมาชิก", value: `<@${target.id}>`, inline: true },
         { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
         { name: "เหตุผล", value: reason }
       ],
-      footer: { text: "BUFFEROVERFLOW" },
+      footer: { text: "_____" },
       timestamp: new Date()
     }]
   });
@@ -211,14 +211,14 @@ if (interaction.commandName === "ban") {
 
   await interaction.reply({
     embeds: [{
-      title: "Member Ban System",
+      title: "Member Ban ",
       color: 0xff0000,
       fields: [
         { name: "สมาชิก", value: `<@${target.id}>`, inline: true },
         { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
         { name: "เหตุผล", value: reason }
       ],
-      footer: { text: "BUFFEROVERFLOW" },
+      footer: { text: "____" },
       timestamp: new Date()
     }]
   });
