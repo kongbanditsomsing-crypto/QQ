@@ -2,7 +2,11 @@ import {
   Client,
   GatewayIntentBits,
   ChannelType,
-  PermissionsBitField
+  PermissionsBitField,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
 } from "discord.js";
 
 import { joinVoiceChannel } from "@discordjs/voice";
