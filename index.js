@@ -42,7 +42,7 @@ const exists = guild.channels.cache.find(
 );  
 if (exists) {  
   return interaction.reply({  
-    content: "❌ มึงมี ticket อยู่แล้ว",  
+    content: " มึงมี ticket อยู่แล้ว",  
     ephemeral: true,  
   });  
 }  
@@ -93,7 +93,7 @@ PermissionsBitField.Flags.Administrator
 )
 ) {
 return interaction.reply({
-content: "❌ ปุ่มนี้สำหรับแอดมินเท่านั้น",
+content: "ชั้นต่ำอยากกดคำสั่งชั้นสูงเเหวะ",
 ephemeral: true,
 });
 }
@@ -144,8 +144,6 @@ embeds: [embed],
 components: [row],
 });
 });
-
-client.login(process.env.DISCORD_TOKEN);
 
 // ===== CONFIG =====
 const LOG_CHANNEL_ID = "1461588208675459217";
