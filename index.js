@@ -203,29 +203,29 @@ if (interaction.commandName === "kick") {
   });
 }
 
-    // /vex
-if (interaction.commandName === "vex") {
+    // ===== ฝากบอก /toyou =====
+if (interaction.isChatInputCommand() && interaction.commandName === "toyou") {
   const text = interaction.options.getString("text");
 
   if (!text) {
     return interaction.reply({
       content: "มึงต้องใส่ข้อความ",
-      ephemeral: true
+      ephemeral: true,
     });
   }
 
   await interaction.reply({
-    content: "ส่งข้อความแล้ว",
-    ephemeral: true
-  });
-
-  await interaction.channel.send({
-    embeds: [{
-      title: "📢 ฝากบอกส่งตรงถึงมึง",
-      description: text,
-      color: 0x5865F2,
-      timestamp: new Date()
-    }]
+    embeds: [
+      {
+        title: "📢 ฝากบอก",
+        description: text,
+        color: 0x5865F2,
+        timestamp: new Date(),
+        footer: {
+          text: "VEXT ฝากบอก",
+        },
+      },
+    ],
   });
 }
 
