@@ -202,10 +202,18 @@ if (interaction.commandName === "kick") {
     // /vex
 if (interaction.commandName === "vex") {
   const text = interaction.options.getString("text");
-  if (!text)
-    return interaction.reply({ content: "มึงต้องใส่ข้อความ", ephemeral: true });
 
-  await interaction.reply({ content: "ส่งข้อความแล้ว", ephemeral: true });
+  if (!text) {
+    return interaction.reply({
+      content: "มึงต้องใส่ข้อความ",
+      ephemeral: true
+    });
+  }
+
+  await interaction.reply({
+    content: "ส่งข้อความแล้ว",
+    ephemeral: true
+  });
 
   await interaction.channel.send({
     embeds: [{
