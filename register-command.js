@@ -78,7 +78,10 @@ new SlashCommandBuilder()
     .addStringOption(o =>
       o.setName("reason").setDescription("เหตุผล")
     ),
-
+new SlashCommandBuilder()
+  .setName("vext")
+  .setDescription("เปิดระบบ Ticket"),
+    ),
   new SlashCommandBuilder()
     .setName("dm")
     .setDescription("ยิงข้อความเข้า DM")
