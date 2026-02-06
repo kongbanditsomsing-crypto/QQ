@@ -40,7 +40,7 @@ const commands = [
       o.setName("count").setDescription("จำนวน สูงสุด999999")
     ),
 new SlashCommandBuilder()
-    .setName("vex")
+    .setName("toyou")
     .setDescription("ฝากบอกข้อความ (ไม่ระบุคนใช้)")
     .addStringOption(o =>
       o.setName("text")
