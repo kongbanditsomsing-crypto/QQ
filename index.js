@@ -254,34 +254,14 @@ if (interaction.commandName === "ban") {
   });
 }
 
-/* ======================
-   /vext (เปิดระบบ Ticket)
-====================== */
-
-  /* ===== Slash Command ===== */
+client.on("interactionCreate", async (interaction) => {
+  // ===== /ticket =====
   if (interaction.isChatInputCommand()) {
-    if (interaction.commandName === "vext") {
-
-      if (
-        !interaction.member.permissions.has(
-          PermissionsBitField.Flags.Administrator
-        )
-      ) {
-        return interaction.reply({
-          content: "ชั้นต่ำอยากกดคำสั่งชั้นสูงสภาพมึงนี่นะ",
-          ephemeral: true,
-        });
-      }
-
+    if (interaction.commandName === "ticket") {
       const embed = new EmbedBuilder()
         .setTitle("🎫 ระบบ Ticket Support")
-        .setDescription(
-          "ยินดีต้อนรับมึงสู่ระบบ Ticket\n\n" +
-          "หากมึงต้องการความช่วยเหลือหรือติดต่อทีมงาน\n" +
-          "**มึงกรุณากดปุ่มด้านล่างเพื่อสร้าง Ticket**\n\n" +
-          "⏰ ทีมงานจะตอบกลับโดยเร็วที่สุด"
-        )
-        .setColor(0xF04A5D);
+        .setDescription("กดปุ่มด้านล่างเพื่อเปิด Ticket")
+        .setColor(0xff5c5c);
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -298,79 +278,57 @@ if (interaction.commandName === "ban") {
     }
   }
 
-  /* ===== ปุ่ม ===== */
-  if (!interaction.isButton()) return;
+  // ===== Buttons =====
+  if (interaction.isButton()) {
+    // เปิด Ticket
+    if (interaction.customId === "open_ticket") {
+      const channel = await interaction.guild.channels.create({
+        name: `ticket-${interaction.user.username}`,
+        type: ChannelType.GuildText,
+        permissionOverwrites: [
+          {
+            id: interaction.guild.id,
+            deny: [PermissionsBitField.Flags.ViewChannel],
+          },
+          {
+            id: interaction.user.id,
+            allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages,
+            ],
+          },
+        ],
+      });
 
-  // ===== เปิด Ticket =====
-  if (interaction.customId === "open_ticket") {
-    const guild = interaction.guild;
-    const member = interaction.member;
+      const closeRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("close_ticket")
+          .setLabel("ปิด Ticket")
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji("🔒")
+      );
 
-    const channelName = `ticket-${member.user.username}`.toLowerCase();
+      await channel.send({
+        content: `<@${interaction.user.id}>`,
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("🎫 Ticket ของคุณ")
+            .setDescription("พิมพ์ปัญหาของคุณได้เลย ทีมงานจะเข้ามาดู")
+            .setColor(0x2ecc71),
+        ],
+        components: [closeRow],
+      });
 
-    const exists = guild.channels.cache.find(
-      (c) => c.name === channelName
-    );
-    if (exists) {
       return interaction.reply({
-        content: "❌ มึงมี ticket อยู่แล้วไอ้ควาย",
+        content: `เปิด Ticket ให้แล้วที่ ${channel}`,
         ephemeral: true,
       });
     }
 
-    const channel = await guild.channels.create({
-      name: channelName,
-      type: ChannelType.GuildText,
-      permissionOverwrites: [
-        {
-          id: guild.id,
-          deny: [PermissionsBitField.Flags.ViewChannel],
-        },
-        {
-          id: member.id,
-          allow: [
-            PermissionsBitField.Flags.ViewChannel,
-            PermissionsBitField.Flags.SendMessages,
-          ],
-        },
-      ],
-    });
-
-    const adminRow = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("admin_tick")
-        .setLabel("กดติ๊กสำหรับแอดมิน")
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji("✅")
-    );
-
-    await channel.send({
-      content: "📌 **กดติ๊กสำหรับแอดมิน**",
-      components: [adminRow],
-    });
-
-    return interaction.reply({
-      content: `✅ สร้าง Ticket แล้ว: ${channel}`,
-      ephemeral: true,
-    });
-  }
-
-  // ===== ปุ่มแอดมิน =====
-  if (interaction.customId === "admin_tick") {
-    if (
-      !interaction.member.permissions.has(
-        PermissionsBitField.Flags.Administrator
-      )
-    ) {
-      return interaction.reply({
-        content: "ชั้นต่ำอยากกดคำสั่งชั้นสูงสภาพมึงนี่นะ",
-        ephemeral: true,
-      });
+    // ปิด Ticket
+    if (interaction.customId === "close_ticket") {
+      return interaction.channel.delete();
     }
-
-    return interaction.reply({
-      content: "✅ แอดมินรับเรื่องแล้ว",
-    });
   }
 });
 
