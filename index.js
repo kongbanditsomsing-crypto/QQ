@@ -23,6 +23,130 @@ const client = new Client({
   ],
 });
 
+/* ======================
+ปุ่ม (interaction)
+====================== */
+client.on("interactionCreate", async (interaction) => {
+if (!interaction.isButton()) return;
+
+// ===== เปิด Ticket =====
+if (interaction.customId === "open_ticket") {
+const guild = interaction.guild;
+const member = interaction.member;
+
+const channelName = `ticket-${member.user.username}`.toLowerCase();  
+
+// กันกดซ้ำ  
+const exists = guild.channels.cache.find(  
+  (c) => c.name === channelName  
+);  
+if (exists) {  
+  return interaction.reply({  
+    content: "❌ มึงมี ticket อยู่แล้ว",  
+    ephemeral: true,  
+  });  
+}  
+
+const channel = await guild.channels.create({  
+  name: channelName,  
+  type: ChannelType.GuildText,  
+  permissionOverwrites: [  
+    {  
+      id: guild.id,  
+      deny: [PermissionsBitField.Flags.ViewChannel],  
+    },  
+    {  
+      id: member.id,  
+      allow: [  
+        PermissionsBitField.Flags.ViewChannel,  
+        PermissionsBitField.Flags.SendMessages,  
+      ],  
+    },  
+  ],  
+});  
+
+const adminRow = new ActionRowBuilder().addComponents(  
+  new ButtonBuilder()  
+    .setCustomId("admin_tick")  
+    .setLabel("กดติ๊กสำหรับแอดมิน")  
+    .setStyle(ButtonStyle.Primary)  
+    .setEmoji("✅")  
+);  
+
+await channel.send({  
+  content: "📌 **กดติ๊กสำหรับแอดมิน**",  
+  components: [adminRow],  
+});  
+
+await interaction.reply({  
+  content: `✅ สร้าง Ticket แล้ว: ${channel}`,  
+  ephemeral: true,  
+});
+
+}
+
+// ===== ปุ่มแอดมิน =====
+if (interaction.customId === "admin_tick") {
+if (
+!interaction.member.permissions.has(
+PermissionsBitField.Flags.Administrator
+)
+) {
+return interaction.reply({
+content: "❌ ปุ่มนี้สำหรับแอดมินเท่านั้น",
+ephemeral: true,
+});
+}
+
+await interaction.reply({  
+  content: "✅ แอดมินรับเรื่องแล้ว",  
+});
+
+}
+});
+
+/* ======================
+คำสั่ง !ticketv
+====================== */
+client.on("messageCreate", async (message) => {
+if (message.author.bot) return;
+if (message.content !== "!ticketv") return;
+
+// เช็กแอดมิน
+if (
+!message.member.permissions.has(
+PermissionsBitField.Flags.Administrator
+)
+) {
+return message.reply("ยศขี้ข้าอยากกดแอดมินจะรั่ว");
+}
+
+const embed = new EmbedBuilder()
+.setTitle("🎫 ระบบ Ticket Support")
+.setDescription(
+"ยินดีคุณมึงต้อนรับสู่ระบบ Ticket\n\n" +
+"หากมึงต้องการความช่วยเหลือหรือติดต่อทีมงาน\n" +
+"กรุณากดปุ่มด้านล่างเพื่อสร้าง Ticket\n\n" +
+"⏰ ทีมงานจะตอบกลับมึงโดยเร็วที่สุด"
+)
+.setColor(0xF04A5D);
+
+const row = new ActionRowBuilder().addComponents(
+new ButtonBuilder()
+.setCustomId("open_ticket")
+.setLabel("เปิด Ticket")
+.setStyle(ButtonStyle.Success)
+.setEmoji("🎫")
+);
+
+await message.channel.send({
+embeds: [embed],
+components: [row],
+});
+});
+
+client.login(process.env.DISCORD_TOKEN);
+
 // ===== CONFIG =====
 const LOG_CHANNEL_ID = "1461588208675459217";
 const BLOCKED_GUILD_ID = "146024011876123456";
@@ -248,38 +372,11 @@ if (interaction.commandName === "ban") {
         { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
         { name: "เหตุผล", value: reason }
       ],
-      footer: { text: "By มึง" },
+      footer: { text: "By พวกกูvex" },
       timestamp: new Date()
     }]
   });
 }
-
-client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
-  if (message.content !== "!ticketv") return;
-
-  // เช็กแอดมินก่อนใช้คำสั่ง
-  if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
-    return message.reply("❌ มึงต้องมียศแอดมินเท่านั้น");
-  }
-
-  const embed = new EmbedBuilder()
-    .setTitle("🎫 ระบบ Ticket Support")
-    .setDescription(
-      "ยินดีคุณมึงต้อนรับสู่ระบบ Ticket\n\n" +
-      "หากมึงต้องการความช่วยเหลือหรือติดต่อทีมงาน\n" +
-      "**กรุณาคุณมึงกดปุ่มด้านล่างเพื่อสร้าง Ticket**\n\n" +
-      "กูจะตอบกลับโดยเร็วที่สุด"
-    )
-    .setColor(0xF04A5D);
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId("open_ticket")
-      .setLabel("เปิด Ticket")
-      .setStyle(ButtonStyle.Success)
-      .setEmoji("🎫")
-  );
 
   await message.channel.send({ embeds: [embed], components: [row] });
 });
