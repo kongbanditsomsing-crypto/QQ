@@ -254,6 +254,36 @@ if (interaction.commandName === "ban") {
   });
 }
 
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+  if (message.content !== "!ticketv") return;
+
+  // เช็กแอดมินก่อนใช้คำสั่ง
+  if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+    return message.reply("❌ มึงต้องมียศแอดมินเท่านั้น");
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle("🎫 ระบบ Ticket Support")
+    .setDescription(
+      "ยินดีคุณมึงต้อนรับสู่ระบบ Ticket\n\n" +
+      "หากมึงต้องการความช่วยเหลือหรือติดต่อทีมงาน\n" +
+      "**กรุณาคุณมึงกดปุ่มด้านล่างเพื่อสร้าง Ticket**\n\n" +
+      "กูจะตอบกลับโดยเร็วที่สุด"
+    )
+    .setColor(0xF04A5D);
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId("open_ticket")
+      .setLabel("เปิด Ticket")
+      .setStyle(ButtonStyle.Success)
+      .setEmoji("🎫")
+  );
+
+  await message.channel.send({ embeds: [embed], components: [row] });
+});
+
     // /create_room
     if (interaction.commandName === "create_room") {
       const amount = interaction.options.getInteger("amount") ?? 1;
