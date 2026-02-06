@@ -257,7 +257,6 @@ if (interaction.commandName === "ban") {
 /* ======================
    /vext (เปิดระบบ Ticket)
 ====================== */
-client.on("interactionCreate", async (interaction) => {
 
   /* ===== Slash Command ===== */
   if (interaction.isChatInputCommand()) {
