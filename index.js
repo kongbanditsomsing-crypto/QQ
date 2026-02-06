@@ -254,9 +254,6 @@ if (interaction.commandName === "ban") {
   });
 }
 
-  await message.channel.send({ embeds: [embed], components: [row] });
-});
-
 /* ======================
    /vext (เปิดระบบ Ticket)
 ====================== */
