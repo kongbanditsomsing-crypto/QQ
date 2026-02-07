@@ -14,6 +14,7 @@ import {
   createAudioPlayer,
   VoiceConnectionStatus,
   entersState
+  NoSubscriberBehavior
 } from "@discordjs/voice";
 
 import "dotenv/config";
