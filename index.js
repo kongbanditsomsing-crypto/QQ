@@ -13,7 +13,7 @@ import {
   joinVoiceChannel,
   createAudioPlayer,
   VoiceConnectionStatus,
-  entersState
+  entersState,
   NoSubscriberBehavior
 } from "@discordjs/voice";
 
