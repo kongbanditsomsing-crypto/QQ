@@ -363,7 +363,7 @@ if (interaction.commandName === "create_room") {
 const amount = interaction.options.getInteger("amount") ?? 1;
 
 await interaction.reply({
-content: กำลังสร้าง ${amount} ห้อง,
+content: `กำลังสร้าง ${amount} ห้อง`,
 ephemeral: true,
 });
 
