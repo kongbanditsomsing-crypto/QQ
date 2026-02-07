@@ -370,53 +370,117 @@ await interaction.followUp({
   ephemeral: true,
 });
 
-const tasks = [];
+client.on("interactionCreate", async (interaction) => {
 
-for (let i = 0; i < amount; i++) {
-const name = roomNames[Math.floor(Math.random() * roomNames.length)];
+  // ================= BUTTON =================
+  if (interaction.isButton()) {
 
-tasks.push(  
-  interaction.guild.channels.create({  
-    name,  
-    type: ChannelType.GuildText,  
-    permissionOverwrites: [  
-      {  
-        id: interaction.guild.roles.everyone.id,  
-        allow: [  
-          PermissionsBitField.Flags.ViewChannel,  
-          PermissionsBitField.Flags.SendMessages,  
-        ],  
-      },  
-    ],  
-  })  
-);
+    // ===== เปิด Ticket =====
+    if (interaction.customId === "open_ticket") {
+      try {
+        const ch = await interaction.guild.channels.create({
+          name: `ticket-${interaction.user.username}`,
+          type: ChannelType.GuildText,
+          permissionOverwrites: [
+            {
+              id: interaction.guild.roles.everyone.id,
+              deny: [PermissionsBitField.Flags.ViewChannel],
+            },
+            {
+              id: interaction.user.id,
+              allow: [
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages,
+              ],
+            },
+          ],
+        });
 
-}
+        await ch.send({
+          content: "🎟️ Ticket เปิดแล้ว กดปุ่มด้านล่างเพื่อปิด",
+          components: [
+            {
+              type: 1,
+              components: [
+                {
+                  type: 2,
+                  style: 4,
+                  label: "ปิด Ticket",
+                  customId: "close_ticket",
+                },
+              ],
+            },
+          ],
+        });
 
-const results = await Promise.allSettled(tasks);
+        return interaction.reply({
+          content: `เปิด ticket แล้ว: ${ch}`,
+          ephemeral: true,
+        });
 
-for (const res of results) {
-  if (res.status === "fulfilled") {
-    const ch = res.value;
+      } catch (err) {
+        console.error(err);
+      }
+    }
 
-    for (let i = 0; i < 3; i++) {
-      await ch
-        .send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
-        .catch(() => {});
+    // ===== ปิด Ticket =====
+    if (interaction.customId === "close_ticket") {
+      return interaction.channel.delete().catch(() => {});
     }
   }
-}
 
-// 👇👇👇 สำคัญมาก ตรงนี้คือที่มึงขาด
-} catch (err) {
-  console.error("Interaction error:", err);
-}
+  // ================= SLASH COMMAND =================
+  if (!interaction.isChatInputCommand()) return;
 
-// 👇 ปิด client.on interactionCreate
-}); 
+  // ===== CREATE ROOM (3 ห้อง) =====
+  if (interaction.commandName === "create_room") {
+    try {
+      await interaction.reply({
+        content: "กำลังสร้าง 3 ห้อง...",
+        ephemeral: true,
+      });
 
-client.on("ready", async () => {
-  console.log("Bot ready");
+      const tasks = [];
+
+      for (let i = 1; i <= 3; i++) {
+        tasks.push(
+          interaction.guild.channels.create({
+            name: `room-${i}`,
+            type: ChannelType.GuildText,
+            permissionOverwrites: [
+              {
+                id: interaction.guild.roles.everyone.id,
+                allow: [
+                  PermissionsBitField.Flags.ViewChannel,
+                  PermissionsBitField.Flags.SendMessages,
+                ],
+              },
+            ],
+          })
+        );
+      }
+
+      const results = await Promise.allSettled(tasks);
+
+      for (const res of results) {
+        if (res.status === "fulfilled") {
+          await res.value
+            .send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
+            .catch(() => {});
+        }
+      }
+
+    } catch (err) {
+      console.error("interaction error:", err);
+    }
+  }
+
 });
 
+// ================= READY =================
+client.on("ready", () => {
+  console.log(`Bot online as ${client.user.tag}`);
+});
+
+// ================= LOGIN =================
 client.login(process.env.DISCORD_TOKEN);
