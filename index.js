@@ -408,8 +408,6 @@ const ch = res.value;
 }
 }
 
-});
-
 client.on("ready", async () => {
    console.log("Bot ready");
 });
