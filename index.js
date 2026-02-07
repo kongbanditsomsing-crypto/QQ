@@ -392,20 +392,6 @@ client.on("interactionCreate", async (interaction) => {
   console.error("ERROR:", err);
 }
 
-client.on("interactionCreate", async (interaction) => {
-  if (interaction.commandName === "create_room") {
-    const tasks = [];
-    for (let i = 0; i < amount; i++) {
-      tasks.push(
-        interaction.guild.channels.create({
-          name: "test-room",
-          type: ChannelType.GuildText
-        })
-      );
-    }
-  }
-});
-
 client.on("ready", async () => {
   console.log("Bot ready");
 });
