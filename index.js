@@ -406,8 +406,9 @@ const ch = res.value;
 }
 
 }
-}              // ปิด if (interaction.commandName === "create_room")
-});            // ✅ ปิด client.on("interactionCreate")
+}
+
+});
 
 client.on("ready", async () => {
    console.log("Bot ready");
