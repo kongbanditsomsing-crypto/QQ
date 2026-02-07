@@ -394,11 +394,14 @@ client.on("interactionCreate", async (interaction) => {
     const tasks = [];
     for (let i = 0; i < amount; i++) {
       tasks.push(
-        interaction.guild.channels.create({...})
+        interaction.guild.channels.create({
+          name: "test-room",
+          type: ChannelType.GuildText
+        })
       );
     }
   }
-}); // <<<<<< ตรงนี้ขาดอยู่
+});
 
 client.on("ready", async () => {
   console.log("Bot ready");
