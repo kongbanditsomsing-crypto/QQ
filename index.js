@@ -285,7 +285,7 @@ if (interaction.commandName === "ban") {
 }
 
 client.on("interactionCreate", async (interaction) => {
-  // ===== /ticket =====
+  try {
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "ticket") {
       const embed = new EmbedBuilder()
