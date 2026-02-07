@@ -388,7 +388,8 @@ client.on("interactionCreate", async (interaction) => {
         );
       }
       }
-      });
+      }
+      );
 
 client.on("interactionCreate", async (interaction) => {
   if (interaction.commandName === "create_room") {
