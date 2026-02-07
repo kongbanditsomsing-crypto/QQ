@@ -320,20 +320,16 @@ client.on("interactionCreate", async (interaction) => {
         });
 
         await ch.send({
-          content: "🎟️ Ticket เปิดแล้ว กดปุ่มด้านล่างเพื่อปิด",
-          components: [
-            {
-              type: 1,
-              components: [
-                {
-                  type: 2,
-                  style: 4,
-                  label: "ปิด Ticket",
-                  customId: "close_ticket",
-                },
-              ],
-            },
-          ],
+          content: "🎫 Ticket เปิดแล้ว กดปุ่มด้านล่างเพื่อปิด",
+          components: [{
+            type: 1,
+            components: [{
+              type: 2,
+              style: 4,
+              label: "ปิด Ticket",
+              customId: "close_ticket",
+            }],
+          }],
         });
 
         return interaction.reply({
@@ -344,63 +340,67 @@ client.on("interactionCreate", async (interaction) => {
       } catch (err) {
         console.error(err);
       }
-
-    // ====== ปิด Ticket ======
-if (interaction.customId === "close_ticket") {
-  return interaction.channel.delete().catch(() => {});
-}
-
-// ================= SLASH COMMAND =================
-if (!interaction.isChatInputCommand()) return;
-
-// ====== CREATE ROOM (3 ห้อง) ======
-if (interaction.commandName === "create_room") {
-  try {
-    await interaction.reply({
-      content: "กำลังสร้าง 3 ห้อง...",
-      ephemeral: true,
-    });
-
-    const tasks = [];
-
-    for (let i = 1; i <= 3; i++) {
-      tasks.push(
-        interaction.guild.channels.create({
-          name: `room-${i}`,
-          type: ChannelType.GuildText,
-          permissionOverwrites: [
-            {
-              id: interaction.guild.roles.everyone.id,
-              deny: [PermissionsBitField.Flags.ViewChannel],
-            },
-            {
-              id: interaction.user.id,
-              allow: [
-                PermissionsBitField.Flags.ViewChannel,
-                PermissionsBitField.Flags.SendMessages,
-              ],
-            },
-          ],
-        })
-      );
     }
 
-const results = await Promise.allSettled(tasks);
+    // ===== ปิด Ticket =====
+    if (interaction.customId === "close_ticket") {
+      return interaction.channel.delete().catch(() => {});
+    }
 
-for (const res of results) {
-  if (res.status === "fulfilled") {
+    return; // ❗ สำคัญมาก กันไหลไป slash
+  }
+
+  // ================= SLASH COMMAND =================
+  if (!interaction.isChatInputCommand()) return;
+
+  // ===== CREATE ROOM (3 ห้อง) =====
+  if (interaction.commandName === "create_room") {
     try {
-      await res.value.send(
-        "ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem"
-      );
-    } catch (e) {}
-  }
-}
+      await interaction.reply({
+        content: "กำลังสร้าง 3 ห้อง...",
+        ephemeral: true,
+      });
 
-} catch (err) {
-    console.error("interaction error:", err);
+      const tasks = [];
+
+      for (let i = 1; i <= 3; i++) {
+        tasks.push(
+          interaction.guild.channels.create({
+            name: `room-${i}`,
+            type: ChannelType.GuildText,
+            permissionOverwrites: [
+              {
+                id: interaction.guild.roles.everyone.id,
+                deny: [PermissionsBitField.Flags.ViewChannel],
+              },
+              {
+                id: interaction.user.id,
+                allow: [
+                  PermissionsBitField.Flags.ViewChannel,
+                  PermissionsBitField.Flags.SendMessages,
+                ],
+              },
+            ],
+          })
+        );
+      }
+
+      const results = await Promise.allSettled(tasks);
+
+      for (const res of results) {
+        if (res.status === "fulfilled") {
+          await res.value.send(
+            "ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem"
+          ).catch(() => {});
+        }
+      }
+
+    } catch (err) {
+      console.error("interaction error:", err);
+    }
   }
-}); // ✅ ปิด client.on("interactionCreate")
+
+}); // ✅ ปิด client.on
 
 client.on("ready", () => {
   console.log(`Bot online as ${client.user.tag}`);
