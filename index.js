@@ -388,9 +388,7 @@ client.on("interactionCreate", async (interaction) => {
         );
       }
 
-      Promise.allSettled(tasks);
-    }
-
+      await Promise.allSettled(tasks);
   } catch (err) {
     console.error("ERROR:", err);
   }
