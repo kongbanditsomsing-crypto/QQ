@@ -405,6 +405,7 @@ client.on("interactionCreate", async (interaction) => {
     }
   }
 });
+});
 
 client.on("ready", async () => {
   console.log("Bot ready");
