@@ -388,7 +388,10 @@ client.on("interactionCreate", async (interaction) => {
         );
       }
 
-      await Promise.allSettled(tasks);
+client.on("ready", async () => {
+  try {
+    // โค้ดก่อนหน้า
+    await Promise.allSettled(tasks);
   } catch (err) {
     console.error("ERROR:", err);
   }
