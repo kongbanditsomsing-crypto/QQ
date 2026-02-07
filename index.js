@@ -391,7 +391,7 @@ if (interaction.commandName === "create_room") {
 for (const res of results) {
   if (res.status === "fulfilled") {
     await res.value
-      .send("ไม่มีโปรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
+      .send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
       .catch(() => {});
   }
 }
@@ -400,7 +400,7 @@ for (const res of results) {
   console.error("interaction error:", err);
 }
 
-}); // 🔴 ปิด client.on("interactionCreate")
+}); // ✅ ปิด client.on("interactionCreate")
 
 // ================= READY =================
 client.on("ready", () => {
