@@ -372,6 +372,10 @@ if (interaction.commandName === "create_room") {
           permissionOverwrites: [
             {
               id: interaction.guild.roles.everyone.id,
+              deny: [PermissionsBitField.Flags.ViewChannel],
+            },
+            {
+              id: interaction.user.id,
               allow: [
                 PermissionsBitField.Flags.ViewChannel,
                 PermissionsBitField.Flags.SendMessages,
@@ -391,12 +395,10 @@ if (interaction.commandName === "create_room") {
           .catch(() => {});
       }
     }
-
   } catch (err) {
     console.error("interaction error:", err);
   }
 }
-});
 
 // ================= READY =================
 client.on("ready", () => {
