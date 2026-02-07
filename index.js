@@ -360,7 +360,6 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.channel.delete();
     }
   }
-});
 
 try {
 if (interaction.commandName === "create_room") {
