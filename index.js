@@ -402,10 +402,8 @@ for (const res of results) {
   }
 }); // ✅ ปิด client.on("interactionCreate")
 
-// ================= READY =================
 client.on("ready", () => {
   console.log(`Bot online as ${client.user.tag}`);
 });
 
-// ================= LOGIN =================
 client.login(process.env.DISCORD_TOKEN);
