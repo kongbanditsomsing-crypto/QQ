@@ -392,6 +392,8 @@ client.on("interactionCreate", async (interaction) => {
   console.error("ERROR:", err);
 }
 
+});
+
 client.on("interactionCreate", async (interaction) => {
   if (interaction.commandName === "create_room") {
     const tasks = [];
