@@ -386,7 +386,7 @@ if (interaction.commandName === "create_room") {
       );
     }
 
-    const results = await Promise.allSettled(tasks);
+const results = await Promise.allSettled(tasks);
 
 for (const res of results) {
   if (res.status === "fulfilled") {
@@ -399,7 +399,7 @@ for (const res of results) {
 } catch (err) {
   console.error("interaction error:", err);
 }
-}); // ปิด client.on("interactionCreate")
+}); // ❗ ต้องมีแค่อันเดียวพอ
 
 // ================= READY =================
 client.on("ready", () => {
