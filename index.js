@@ -387,6 +387,7 @@ client.on("interactionCreate", async (interaction) => {
           }).catch(()=>{})
         );
       }
+      }
 
 client.on("ready", async () => {
   try {
