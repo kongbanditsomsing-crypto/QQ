@@ -389,13 +389,19 @@ client.on("interactionCreate", async (interaction) => {
       }
       }
 
-client.on("ready", async () => {
-  try {
-    // โค้ดก่อนหน้า
-    await Promise.allSettled(tasks);
-  } catch (err) {
-    console.error("ERROR:", err);
+client.on("interactionCreate", async (interaction) => {
+  if (interaction.commandName === "create_room") {
+    const tasks = [];
+    for (let i = 0; i < amount; i++) {
+      tasks.push(
+        interaction.guild.channels.create({...})
+      );
+    }
   }
+}); // <<<<<< ตรงนี้ขาดอยู่
+
+client.on("ready", async () => {
+  console.log("Bot ready");
 });
 
 client.login(process.env.DISCORD_TOKEN);
