@@ -404,7 +404,6 @@ const ch = res.value;
   }  
 }
   }
-}
 } catch (err) {
   console.error("interaction error:", err);
 }
