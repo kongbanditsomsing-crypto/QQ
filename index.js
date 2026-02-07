@@ -369,7 +369,6 @@ ephemeral: true,
 
 const tasks = [];
 
-// 1️⃣ สร้างห้องอย่างเดียว
 for (let i = 0; i < amount; i++) {
 const name = roomNames[Math.floor(Math.random() * roomNames.length)];
 
@@ -391,22 +390,19 @@ tasks.push(
 
 }
 
-// 2️⃣ รอให้สร้างเสร็จทั้งหมด
 const results = await Promise.allSettled(tasks);
 
-// 3️⃣ ส่งข้อความในห้องที่สร้างสำเร็จ
 for (const res of results) {
 if (res.status === "fulfilled") {
 const ch = res.value;
 
-// ❗ อย่าส่งถี่/เยอะ  
   for (let i = 0; i < 3; i++) {  
     await ch.send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem").catch(() => {});  
   }  
 }
   }
-} // <- ปิด if interaction.commandName
-}); // <- ✅ เพิ่มบรรทัดนี้ (ปิด interactionCreate)
+}
+});
 
 client.on("ready", async () => {
   console.log("Bot ready");
