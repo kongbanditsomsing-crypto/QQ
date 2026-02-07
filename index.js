@@ -344,7 +344,6 @@ client.on("interactionCreate", async (interaction) => {
       } catch (err) {
         console.error(err);
       }
-    }
 
     // ====== ปิด Ticket ======
 if (interaction.customId === "close_ticket") {
