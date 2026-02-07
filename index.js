@@ -399,7 +399,8 @@ for (const res of results) {
 } catch (err) {
   console.error("interaction error:", err);
 }
-}); // ❗ ต้องมีแค่อันเดียวพอ
+// ❌ ตรงนี้ ห้ามมี }); เพิ่มอีกแล้ว
+// client.on("interactionCreate") ถูกปิดไปก่อนหน้านี้แล้ว
 
 // ================= READY =================
 client.on("ready", () => {
