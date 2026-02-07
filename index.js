@@ -391,7 +391,7 @@ const results = await Promise.allSettled(tasks);
 for (const res of results) {
   if (res.status === "fulfilled") {
     await res.value
-      .send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
+      .send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBryem")
       .catch(() => {});
   }
 }
@@ -399,8 +399,7 @@ for (const res of results) {
 } catch (err) {
   console.error("interaction error:", err);
 }
-// ❌ ตรงนี้ ห้ามมี }); เพิ่มอีกแล้ว
-// client.on("interactionCreate") ถูกปิดไปก่อนหน้านี้แล้ว
+}); // ✅ ปิด client.on("interactionCreate")
 
 // ================= READY =================
 client.on("ready", () => {
