@@ -362,13 +362,13 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-    // /create_room
+try {
 if (interaction.commandName === "create_room") {
 const amount = interaction.options.getInteger("amount") ?? 1;
 
-await interaction.reply({
-content: `กำลังสร้าง ${amount} ห้อง`,
-ephemeral: true,
+await interaction.followUp({
+  content: `กำลังสร้าง ${amount} ห้อง`,
+  ephemeral: true,
 });
 
 const tasks = [];
@@ -406,7 +406,9 @@ const ch = res.value;
 }
   }
 }
-  }
+} catch (err) {
+  console.error("interaction error:", err);
+}
 });
 
 client.on("ready", async () => {
