@@ -399,8 +399,7 @@ for (const res of results) {
 } catch (err) {
   console.error("interaction error:", err);
 }
-
-}); // ✅ ปิด client.on("interactionCreate")
+}); // ปิด client.on("interactionCreate")
 
 // ================= READY =================
 client.on("ready", () => {
