@@ -346,58 +346,56 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
-    // ===== ปิด Ticket =====
-    if (interaction.customId === "close_ticket") {
-      return interaction.channel.delete().catch(() => {});
+    // ====== ปิด Ticket ======
+if (interaction.customId === "close_ticket") {
+  return interaction.channel.delete().catch(() => {});
+}
+
+// ================= SLASH COMMAND =================
+if (!interaction.isChatInputCommand()) return;
+
+// ====== CREATE ROOM (3 ห้อง) ======
+if (interaction.commandName === "create_room") {
+  try {
+    await interaction.reply({
+      content: "กำลังสร้าง 3 ห้อง...",
+      ephemeral: true,
+    });
+
+    const tasks = [];
+
+    for (let i = 1; i <= 3; i++) {
+      tasks.push(
+        interaction.guild.channels.create({
+          name: `room-${i}`,
+          type: ChannelType.GuildText,
+          permissionOverwrites: [
+            {
+              id: interaction.guild.roles.everyone.id,
+              allow: [
+                PermissionsBitField.Flags.ViewChannel,
+                PermissionsBitField.Flags.SendMessages,
+              ],
+            },
+          ],
+        })
+      );
     }
-  }
 
-  // ================= SLASH COMMAND =================
-  if (!interaction.isChatInputCommand()) return;
+    const results = await Promise.allSettled(tasks);
 
-  // ===== CREATE ROOM (3 ห้อง) =====
-  if (interaction.commandName === "create_room") {
-    try {
-      await interaction.reply({
-        content: "กำลังสร้าง 3 ห้อง...",
-        ephemeral: true,
-      });
-
-      const tasks = [];
-
-      for (let i = 1; i <= 3; i++) {
-        tasks.push(
-          interaction.guild.channels.create({
-            name: `room-${i}`,
-            type: ChannelType.GuildText,
-            permissionOverwrites: [
-              {
-                id: interaction.guild.roles.everyone.id,
-                allow: [
-                  PermissionsBitField.Flags.ViewChannel,
-                  PermissionsBitField.Flags.SendMessages,
-                ],
-              },
-            ],
-          })
-        );
+    for (const res of results) {
+      if (res.status === "fulfilled") {
+        await res.value
+          .send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
+          .catch(() => {});
       }
-
-      const results = await Promise.allSettled(tasks);
-
-      for (const res of results) {
-        if (res.status === "fulfilled") {
-          await res.value
-            .send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
-            .catch(() => {});
-        }
-      }
-
-    } catch (err) {
-      console.error("interaction error:", err);
     }
-  }
 
+  } catch (err) {
+    console.error("interaction error:", err);
+  }
+}
 });
 
 // ================= READY =================
