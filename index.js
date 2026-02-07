@@ -9,7 +9,13 @@ import {
   ButtonStyle
 } from "discord.js";
 
-import { joinVoiceChannel } from "@discordjs/voice";
+import {
+  joinVoiceChannel,
+  createAudioPlayer,
+  VoiceConnectionStatus,
+  entersState
+} from "@discordjs/voice";
+
 import "dotenv/config";
 
 const client = new Client({
