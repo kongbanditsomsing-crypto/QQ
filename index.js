@@ -160,14 +160,33 @@ client.on("interactionCreate", async (interaction) => {
       const vc = interaction.member.voice?.channel;
       if (!vc)
         return interaction.reply({ content: "มึงเข้า vc ก่อนไอ้ควาย", ephemeral: true });
-      joinVoiceChannel({
-        channelId: vc.id,
-        guildId: vc.guild.id,
-        adapterCreator: vc.guild.voiceAdapterCreator,
-        selfDeaf:false,selfMute:false
-      });
-      return interaction.reply({ content:`เข้าห้อง ${vc.name} แล้ว`, ephemeral:true });
-    }
+      const connection = joinVoiceChannel({
+  channelId: vc.id,
+  guildId: vc.guild.id,
+  adapterCreator: vc.guild.voiceAdapterCreator,
+  selfDeaf: false,
+  selfMute: false,
+});
+
+const player = createAudioPlayer({
+  behaviors: {
+    noSubscriber: NoSubscriberBehavior.Play
+  }
+});
+
+connection.subscribe(player);
+
+// กันหลุดซ้ำ
+connection.on(VoiceConnectionStatus.Disconnected, async () => {
+  try {
+    await Promise.race([
+      entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+      entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+    ]);
+  } catch {
+    connection.destroy();
+  }
+});
 
     // /tell_off
     if (interaction.commandName === "tell_off") {
