@@ -399,11 +399,18 @@ for (const res of results) {
 if (res.status === "fulfilled") {
 const ch = res.value;
 
-  for (let i = 0; i < 3; i++) {  
-    await ch.send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem").catch(() => {});  
-  }  
+  for (let i = 0; i < 3; i++) {
+  await ch.send(
+    "ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem"
+  ).catch(() => {});
 }
-  }
+} // ← ปิด if (res.status === "fulfilled")
+
+} // ← ปิด for (const res of results)
+
+} // ← ❗ ปิด if (interaction.commandName === "create_room")
+
+}); // ← ❗ ปิด client.on("interactionCreate")
 
 client.on("ready", async () => {
   console.log("Bot ready");
