@@ -388,17 +388,19 @@ if (interaction.commandName === "create_room") {
 
     const results = await Promise.allSettled(tasks);
 
-    for (const res of results) {
-      if (res.status === "fulfilled") {
-        await res.value
-          .send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
-          .catch(() => {});
-      }
-    }
-  } catch (err) {
-    console.error("interaction error:", err);
+for (const res of results) {
+  if (res.status === "fulfilled") {
+    await res.value
+      .send("ไม่มีโปรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
+      .catch(() => {});
   }
 }
+
+} catch (err) {
+  console.error("interaction error:", err);
+}
+
+}); // 🔴 ปิด client.on("interactionCreate")
 
 // ================= READY =================
 client.on("ready", () => {
