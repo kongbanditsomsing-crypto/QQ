@@ -404,12 +404,12 @@ const ch = res.value;
     await ch.send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem").catch(() => {});  
   }  
 }
-
-}
-}
+  }
+} // <- ปิด if interaction.commandName
+}); // <- ✅ เพิ่มบรรทัดนี้ (ปิด interactionCreate)
 
 client.on("ready", async () => {
-   console.log("Bot ready");
+  console.log("Bot ready");
 });
 
 client.login(process.env.DISCORD_TOKEN);
