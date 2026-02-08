@@ -35,7 +35,7 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("tell_off")
-    .setDescription("ยิงข้อความ random")
+    .setDescription("ยิงภาพศพ")
     .addIntegerOption(o =>
       o.setName("count").setDescription("จำนวน สูงสุด999999")
     ),
