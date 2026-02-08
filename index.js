@@ -397,11 +397,13 @@ client.on("interactionCreate", async (interaction) => {
             .catch(() => {});
         }
       }
+
     } catch (err) {
       console.error("interaction error:", err);
     }
   }
-});
+
+}); // ✅ ปิด client.on("interactionCreate")
 
 // ================= READY =================
 client.on("ready", () => {
