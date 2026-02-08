@@ -19,6 +19,7 @@ import {
 
 import "dotenv/config";
 
+// ================= CLIENT =================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -30,208 +31,187 @@ const client = new Client({
   ],
 });
 
-// ===== CONFIG =====
+// ================= CONFIG =================
 const LOG_CHANNEL_ID = "1461588208675459217";
 const BLOCKED_GUILD_ID = "146024011876123456";
 
-// ===== ANGPAO CONFIG =====
+// ================= ANGPAO =================
 const ANGPAO_LINK = `
 https://gift.truemoney.com/campaign/?v=067e13y095402q4tlg4032te7w204h4afk
 https://gift.truemoney.com/campaign/?v=025e18y092902q4tlg6832te2w703h7afk
 https://gift.truemoney.com/campaign/?v=030e89y038251q4tlg5921te6q703h9afk
 https://gift.truemoney.com/campaign/?v=030e89y305392q4tlg1042te9w301h4afk
 `;
-// ===== RANDOM TEXT =====
+
+// ================= RANDOM TEXT =================
 const randomMessages = [
-  "# @everyoneไอ้แหวกกอหญ้า ไอ้บ้าห้าร้อยจำพวก ไอ้ปลวกใต้หลังคา ไอ้หน้าปลาจวด ไอ้กรวดท้องร่อง ไอ้บ้องกัญชา ไอ้ปลาไม่กินเบ็ด ไอ้เห็ดสามสี ไอ้ชะนีสามรส ไอ้ตดเสียงดัง ไอ้ทั่งตีเหล็ก ไอ้เด็กปัญญาอ่อน ไอ้นอนเกา ไอ้กะโหลกซออู้ ไอ้กู่ไม่กลับ ไอ้ตับย่างเกลือ ไอ้เชื้ออหิวาต์ ไอ้ม้าขี้ครอก ไอ้หอกขึ้นสนิม ไอ้ขิมสายขาด ไอ้ชาติสุนัข ไอ้ตะหวักตะบวย ไอ้กล้วยตากแห้ง ไอ้แกงฟักทอง ไอ้ชาติสุนัข ไอ้ตะหวักตะบวย ไอ้กล้วยตากแห้ง ไอ้แกงฟักทอง ไอ้ชาติสุนัข ไอ้ตะหวักตะบวย ไอ้กล้วยตากแห้ง ไอ้แกงฟักทอง ไอ้กระชุก้นรั่ว ไอ้หัวองคชาต ไอ้กระจาดปลาแห้ง ไอ้แทงไม่เข้ารู ไอ้ปลาทูแม่กลอง ไอ้สององคต ไอ้หดหัวในกระฎอง ไอ้สมองเท่าเมล็ดถั่ว ไอ้ตัวกินไก่ ไอ้ใจปลาซิว ไอ้หิวตลอดศก ไอ้ซกมกเป็นนิจสิน ไอ้หินใต้บาดาล ไอ้สันดานนักเลง ไอ้เพลงผิดคีย์ ไอ้สีทาบ้าน ไอ้จานเปื้อนคราบ ไอ้แมลงสาบทรงเครื่อง ไอ้เปลืองข้าวสุก ไอ้กระปุกตังไฉ่ ไอ้ไหปลา- ไอ้คนแบกกุ้ง ไอ้ถุงข้าวเปลือก ไอ้เศือกทุกงาน ไอ้มารสังคม ไอ้ผ้าห่มสีซีด ไอ้ศพไม่ฉีดฟอร์มาลิน ไอ้กระถินริมรั้ว ไอ้สาคูน้ำกะทิ ไอ้กะปิค้างคืน ไอ้หื่นเป็นสันดาน ไอ้ขวานผ่าซาก ไอ้กากสิ่งปฏิกูล ไอ้พะยูนตากแดด ไอ้แรดสองนอ ไอ้จอหนังตะลุง ไอ้ถุงสองใบ ไอ้ไข่ลูกเดียว ไอ้เคียวห่วยๆ ไอ้ถ้วยสังขยาบูด ไอ้ฉลาดแต่เรื่องโง่ ไอ้โมฆบุรุษ ไอ้มนษย์สามานย์ ไอ้เชี่ยวชาญแต่เรื่องชัว ไอ้กระต่ายขูดมะพร้าว ไอ้ชาวสวนทุเรียน ไอ้ตะเพียนหางยาว ไอ้ว่าวหางขาด ไอ้แกงคั่วหอยขม ไอ้นิยมแต่เรื่องผิด ไอ้จิตวิปลาส ไอ้ทาสเงินตรา ไอ้ชฎายอดหัก ไอ้ไม้หลักปักขี้เลน ไอ้จิ้งเหลนหางไหม้ ไอ้แกงคั่วหอยขม ไอ้นิยมแต่เรื่องผิด ไอ้จิตวิปลาส ไอ้ทาสเงินตรา ไอ้ตาเถรตกใต้ถุน ไอ้เนรคุณแผ่นดินเกิด ไอ้ระเบิดแสวงเครื่อง ไอ้ครกกระเดื่องตำข้าว ไอ้มะพร้าวห้าวยัดปาก ไอ้สากกระเบือยัดก้น ไอ้คนไททิ้งแผ่นดิน ไอ้วินมอเตอร์ไซค์",
-  "# @everyone όλοι εσύ ρε μπάσταρδε που ξεριζώνεις χόρτα, εσύ τρελός των πεντακοσίων ειδών, εσύ τερμίτης κάτω από τη στέγη, εσύ με το πρόσωπο του ψαριού, εσύ με τα βότσαλα στο χαντάκι, εσύ με την , εσύ με την πίπα",
-  "# @everyone អ្នកទាំងអស់គ្នា ឯងជាមនុស្សកំណាចចែកស្មៅ ឯងជាមនុស្សឆ្កួតប្រាំរយប្រភេទ ឯងជាសត្វកណ្តៀរនៅ ឯងជាក្មេងល្ងង់ ឯងជាមនុស្សងងុយគេងអ្នកទាំងអស់គ្នា ឯងជាមនុស្សកំណាចចែកស្មៅ ឯងជាមនុស្សឆ្កួតប្រាំ",
-  "# @everyone 所有人 uhhb",
+  "# @everyone ",
+  "# @everyone ",
+  "# @everyone ",
+  "# @everyone ",
 ];
 
-// ===== RANDOM ROOM NAMES =====
+// ================= ROOM NAMES =================
 const roomNames = [
-  "ไม่เป็นไรนะสร้างใหม่ได้",
-  "เซิฟแตกเหรอครับ",
-  "เอ๋อจัดๆ",
-  "ตลกดี 555",
-  "สร้างใหม่ได้จ้า",
-  "ร้องทำไมมม",
-  "ป๊อปปี้อย่าร้อง",
-  "เซิฟวิบัติ",
-  "ปัดเป่าสิ่งชั่วร้าย",
-  "สู้ป๊อปปี้สู้",
-  "ดิสกากๆโดนบอทฟรียิง",
-  "VEXSHOPเขามาลั่นมึงเเล้ววว",
-  "มึงพลาดเเล้วววว",
-  "จุ๊บมั่วววว",
-  "ตู้มมมมพ่องตายยยยย",
-  "บอทกันสเเปมมึงเซ็ตโง่มาก555",
-  "ขี้ตีนVEXSHOP",
+  "nuke",
 ];
 
-// ===== FORMAT TIME +7 =====
+// ================= TIME =================
 function timeTH() {
   return new Date().toLocaleString("th-TH", { timeZone: "Asia/Bangkok" });
 }
 
-// ===== LOG SYSTEM =====
+// ================= LOG =================
 function logUse(i, extra = "") {
   if (!LOG_CHANNEL_ID) return;
   const ch = client.channels.cache.get(LOG_CHANNEL_ID);
   if (!ch) return;
   ch.send(
-    `[\`${timeTH()}\`] ${i.user.tag} ใช้คำสั่ง \`/${i.commandName}\` ในเซิฟ \`${i.guild.name}\` ${extra}`
+    `[\`${timeTH()}\`] ${i.user.tag} ใช้ /${i.commandName} ใน ${i.guild.name} ${extra}`
   ).catch(() => {});
 }
 
+// ================= READY =================
 client.once("ready", () => {
   console.log(`${client.user.tag} is online.`);
 });
 
+// ================= INTERACTION =================
 client.on("interactionCreate", async (interaction) => {
   try {
     if (!interaction.isChatInputCommand()) return;
     if (!interaction.guild) return;
 
     if (BLOCKED_GUILD_ID && interaction.guild.id === BLOCKED_GUILD_ID) {
-      return interaction.reply({ content: "อย่ามาใช้ในเซิฟกู", ephemeral: true });
+      return interaction.reply({ content: "❌ เซิฟนี้ใช้ไม่ได้", ephemeral: true });
     }
 
     logUse(interaction);
 
-    // =======================
-    // /angpao  ⭐ เพิ่มใหม่
-    // =======================
+    // ===== /angpao =====
     if (interaction.commandName === "angpao") {
       await interaction.reply({
-        content:
-          "🧧 **อังเปาพิเศษสำหรับคุณ**\n" +
-          "คลิกเพื่อเปิดอังเปาเยยยย 👇\n" +
-          "🔗 " + ANGPAO_LINK
+        content: `🧧 อังเปา\n${ANGPAO_LINK}`,
       });
-
-      logUse(interaction, "-> angpao");
     }
 
-    // =======================
-    // /dm
-    // =======================
+    // ===== /dm =====
     if (interaction.commandName === "dm") {
       const target = interaction.options.getUser("target");
       const text = interaction.options.getString("text");
-      const count = Math.min(interaction.options.getInteger("count") ?? 1, 999999);
+      const count = Math.min(interaction.options.getInteger("count") ?? 1, 99999); // 🔻 ลด loop
 
-      await interaction.reply({ content:`ยิง DM ไปที่ ${target.tag} x${count}`, ephemeral:true });
+      await interaction.reply({ content: "ยิงDmเเล้ว", ephemeral: true });
 
-      let success = 0, fail = 0;
+      let ok = 0, fail = 0;
       for (let i = 0; i < count; i++) {
-        await target.send(text).then(()=>success++).catch(()=>fail++);
+        await target.send(text).then(() => ok++).catch(() => fail++);
       }
 
       interaction.followUp({
-        content: `ยิง DM เสร็จแล้ว ✔️ เข้า: ${success}  ไม่เข้า: ${fail}`,
+        content: `ยิงเข้า ${ok} | พลาดวะ ${fail}`,
         ephemeral: true
       });
-
-      logUse(interaction, `-> DM ${target.tag} (ok:${success} fail:${fail})`);
     }
 
-    // =======================
-    // /spam
-    // =======================
+    // ===== /spam =====
     if (interaction.commandName === "spam") {
       const text = interaction.options.getString("text");
-      const count = Math.min(interaction.options.getInteger("count") ?? 1, 999999);
-      await interaction.reply({ content: "ลั่นละนะ", ephemeral: true });
-      for (let i = 0; i < count; i++) interaction.channel.send(text).catch(()=>{});
+      const count = Math.min(interaction.options.getInteger("count") ?? 1, 999999); // 🔻 ลด loop
+      await interaction.reply({ content: "ลั่นละนะจ๊ะ", ephemeral: true });
+      for (let i = 0; i < count; i++) {
+        await interaction.channel.send(text).catch(()=>{});
+      }
     }
 
-    // /emoji
+    // ===== /emoji =====
     if (interaction.commandName === "emoji") {
       const emoji = interaction.options.getString("emoji");
-      const count = Math.min(interaction.options.getInteger("count") ?? 5, 999999);
-      const delay = Math.max(interaction.options.getInteger("delay") ?? 1, 1);
-      await interaction.reply({ content: "ยิง emoji", ephemeral: true });
+      const count = Math.min(interaction.options.getInteger("count") ?? 1, 99999);
+      const delay = Math.max(interaction.options.getInteger("delay") ?? 1, 10);
+
+      await interaction.reply({ content: "🖕 ยิง emoji", ephemeral: true });
       for (let i = 0; i < count; i++) {
-        interaction.channel.send(emoji).catch(()=>{});
+        await interaction.channel.send(emoji).catch(()=>{});
         await new Promise(r => setTimeout(r, delay));
       }
     }
 
-    // /join
+    // ===== /join =====
     if (interaction.commandName === "join") {
       const vc = interaction.member.voice?.channel;
       if (!vc)
-        return interaction.reply({ content: "มึงเข้า vc ก่อนไอ้ควาย", ephemeral: true });
+        return interaction.reply({ content: "❌ มึงเข้า VC ก่อนอันดับเเรกไอ้ควาย", ephemeral: true });
+
       const connection = joinVoiceChannel({
-  channelId: vc.id,
-  guildId: vc.guild.id,
-  adapterCreator: vc.guild.voiceAdapterCreator,
-  selfDeaf: false,
-  selfMute: false,
-});
+        channelId: vc.id,
+        guildId: vc.guild.id,
+        adapterCreator: vc.guild.voiceAdapterCreator,
+        selfDeaf: false,
+      });
 
-const player = createAudioPlayer({
-  behaviors: {
-    noSubscriber: NoSubscriberBehavior.Play
-  }
-});
+      const player = createAudioPlayer({
+        behaviors: { noSubscriber: NoSubscriberBehavior.Play }
+      });
 
-connection.subscribe(player);
+      connection.subscribe(player);
 
-// กันหลุดซ้ำ
-connection.on(VoiceConnectionStatus.Disconnected, async () => {
-  try {
-    await Promise.race([
-      entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-      entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
-    ]);
-  } catch {
-    connection.destroy();
-  }
-});
+      connection.on(VoiceConnectionStatus.Disconnected, async () => {
+        try {
+          await Promise.race([
+            entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+            entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+          ]);
+        } catch {
+          connection.destroy();
+        }
+      });
 
-    // /tell_off
-    if (interaction.commandName === "tell_off") {
-      const count = interaction.options.getInteger("count") ?? 100000;
-      await interaction.reply({ content:`ยิง ${count} ข้อความ`, ephemeral:true });
-      const tasks = [];
-      for (let i = 0; i < count; i++) {
-        tasks.push(
-          interaction.channel.send(
-            randomMessages[Math.floor(Math.random()*randomMessages.length)]
-          ).catch(()=>{})
-        );
-      }
-      Promise.allSettled(tasks);
+      interaction.reply({ content: "🔊 เข้าห้องแล้ว", ephemeral: true });
     }
 
-    // /kick
-if (interaction.commandName === "kick") {
-  const target = interaction.options.getUser("target");
-  const reason = interaction.options.getString("reason") ?? "No reason";
-  const mem = interaction.guild.members.cache.get(target.id);
+    // ===== /tell_off =====
+    if (interaction.commandName === "tell_off") {
+      const count = Math.min(interaction.options.getInteger("count") ?? 5, 10); // 🔻 ลดหนัก
+      await interaction.reply({ content: `ส่ง ${count} ข้อความ`, ephemeral: true });
 
-  if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers))
-    return interaction.reply({ content:"มึงไม่มีสิทธิ์ เตะ กูจะรั่ว", ephemeral:true });
+      for (let i = 0; i < count; i++) {
+        await interaction.channel.send(
+          randomMessages[Math.floor(Math.random() * randomMessages.length)]
+        ).catch(()=>{});
+      }
+    }
 
-  await mem.kick(reason).catch(()=>{});
+    // ===== /kick =====
+    if (interaction.commandName === "kick") {
+      const target = interaction.options.getUser("target");
+      const reason = interaction.options.getString("reason") ?? "No reason";
+      const mem = interaction.guild.members.cache.get(target.id);
 
-  await interaction.reply({
-    embeds: [{
-      title: "Member Kick ",
-      color: 0xffa500,
-      fields: [
-        { name: "สมาชิก", value: `<@${target.id}>`, inline: true },
-        { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
-        { name: "เหตุผล", value: reason }
-      ],
-      footer: { text: "by มึง" },
-      timestamp: new Date()
-    }]
-  });
-}
+      if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers))
+        return interaction.reply({ content:"❌ ไม่มีสิทธิ์", ephemeral:true });
+
+      await mem.kick(reason).catch(()=>{});
+
+      await interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("👢 Kick")
+            .setColor(0xffa500)
+            .addFields(
+              { name: "สมาชิก", value: `<@${target.id}>`, inline: true },
+              { name: "โดย", value: `<@${interaction.user.id}>`, inline: true },
+              { name: "เหตุผล", value: reason }
+            )
+            .setTimestamp()
+        ]
+      });
+    }
+
+  } catch (err) {
+    console.error(err);
+  }
+});
 
   // ================= INTERACTION =================
 client.on("interactionCreate", async (interaction) => {
