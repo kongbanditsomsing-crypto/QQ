@@ -167,7 +167,7 @@ client.on("interactionCreate", async (interaction) => {
         }
       });
 
-      interaction.reply({ content: "🔊 เข้าห้องแล้ว", ephemeral: true });
+      interaction.reply({ content: " เข้าห้องแล้ว", ephemeral: true });
     }
 
     // ===== /tell_off =====
@@ -219,7 +219,7 @@ client.on("interactionCreate", async (interaction) => {
   // ================= BUTTON =================
   if (interaction.isButton()) {
 
-    if (interaction.customId === "open_ticket") {
+    if (interaction.customId === "vex") {
       try {
         const ch = await interaction.guild.channels.create({
           name: `ticket-${interaction.user.username}`,
