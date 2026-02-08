@@ -259,37 +259,13 @@ if (interaction.isChatInputCommand() && interaction.commandName === "toyou") {
   });
 }
 
-    // /ban
-if (interaction.commandName === "ban") {
-  const target = interaction.options.getUser("target");
-  const reason = interaction.options.getString("reason") ?? "No reason";
-
-  if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers))
-    return interaction.reply({ content:"มึงไม่มีสิทธิ์ Ban กูจะรั่ว", ephemeral:true });
-
-  await interaction.guild.members.ban(target, { reason }).catch(()=>{});
-
-  await interaction.reply({
-    embeds: [{
-      title: "Member Ban ",
-      color: 0xff0000,
-      fields: [
-        { name: "สมาชิก", value: `<@${target.id}>`, inline: true },
-        { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
-        { name: "เหตุผล", value: reason }
-      ],
-      footer: { text: "By พวกกูvex" },
-      timestamp: new Date()
-    }]
-  });
-}
-
+// ================= INTERACTION =================
 client.on("interactionCreate", async (interaction) => {
 
   // ================= BUTTON =================
   if (interaction.isButton()) {
 
-    // ===== เปิด Ticket =====
+    // ==== เปิด Ticket ====
     if (interaction.customId === "open_ticket") {
       try {
         const ch = await interaction.guild.channels.create({
@@ -311,7 +287,7 @@ client.on("interactionCreate", async (interaction) => {
         });
 
         await ch.send({
-          content: "🎫 Ticket เปิดแล้ว กดปุ่มด้านล่างเพื่อปิด",
+          content: "📩 Ticket เปิดแล้ว กดปุ่มด้านล่างเพื่อปิด",
           components: [{
             type: 1,
             components: [{
@@ -333,7 +309,7 @@ client.on("interactionCreate", async (interaction) => {
       }
     }
 
-    // ===== ปิด Ticket =====
+    // ==== ปิด Ticket ====
     if (interaction.customId === "close_ticket") {
       return interaction.channel.delete().catch(() => {});
     }
@@ -344,7 +320,43 @@ client.on("interactionCreate", async (interaction) => {
   // ================= SLASH COMMAND =================
   if (!interaction.isChatInputCommand()) return;
 
-  // ===== CREATE ROOM (3 ห้อง) =====
+  // ===== /ban =====
+  if (interaction.commandName === "ban") {
+    const target = interaction.options.getUser("target");
+    const reason =
+      interaction.options.getString("reason") ?? "No reason";
+
+    if (
+      !interaction.member.permissions.has(
+        PermissionsBitField.Flags.BanMembers
+      )
+    ) {
+      return interaction.reply({
+        content: "มึงไม่มีสิทธิ์ Ban กูจะรั่ว",
+        ephemeral: true,
+      });
+    }
+
+    await interaction.guild.members
+      .ban(target, { reason })
+      .catch(() => {});
+
+    return interaction.reply({
+      embeds: [{
+        title: "Member Ban",
+        color: 0xff0000,
+        fields: [
+          { name: "สมาชิก", value: `<@${target.id}>`, inline: true },
+          { name: "ผู้ใช้คำสั่ง", value: `<@${interaction.user.id}>`, inline: true },
+          { name: "เหตุผล", value: reason },
+        ],
+        footer: { text: "By พวกกูvex" },
+        timestamp: new Date(),
+      }],
+    });
+  }
+
+  // ===== /create_room (3 ห้อง) =====
   if (interaction.commandName === "create_room") {
     try {
       await interaction.reply({
@@ -380,19 +392,18 @@ client.on("interactionCreate", async (interaction) => {
 
       for (const res of results) {
         if (res.status === "fulfilled") {
-          await res.value.send(
-            "ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem"
-          ).catch(() => {});
+          await res.value
+            .send("ไม่เป็นไรนะ สร้างใหม่ได้ https://discord.gg/bdtRJBRyem")
+            .catch(() => {});
         }
       }
-
     } catch (err) {
       console.error("interaction error:", err);
     }
   }
+});
 
-}); // ✅ ปิด client.on
-
+// ================= READY =================
 client.on("ready", () => {
   console.log(`Bot online as ${client.user.tag}`);
 });
