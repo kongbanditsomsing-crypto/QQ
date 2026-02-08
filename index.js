@@ -45,8 +45,8 @@ https://gift.truemoney.com/campaign/?v=030e89y305392q4tlg1042te9w301h4afk
 
 // ================= RANDOM TEXT =================
 const randomMessages = [
-  "# @everyone ",
-  "# @everyone ",
+  "# @everyone https://cdn.discordapp.com/attachments/1456691382134509690/1456901560184340490/Screenshot_2026-01-03-13-45-59-016_com.android.chrome-edit.jpg?ex=698982cf&is=6988314f&hm=8f4137e508b4f94b9197fce1534a03bdc8ca8615765308f22b6149c6f8da4db1&",
+  "# @everyone https://cdn.discordapp.com/attachments/1456691382134509690/1456901963517001790/Screenshot_2026-01-03-13-47-43-104_com.android.chrome-edit.jpg?ex=69898330&is=698831b0&hm=67f19e7f886c2d76931133a200ed622985cc65f7d9c5135428ee671d321b37db&",
   "# @everyone ",
   "# @everyone ",
 ];
