@@ -1,26 +1,54 @@
 import {
   Client,
-  GatewayIntentBits
+  GatewayIntentBits,
+  ChannelType,
+  PermissionsBitField,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
 } from "discord.js";
 
+import {
+  joinVoiceChannel,
+  createAudioPlayer,
+  VoiceConnectionStatus,
+  entersState,
+  NoSubscriberBehavior
+} from "@discordjs/voice";
+
 import { parsePhoneNumberFromString } from "libphonenumber-js";
+import OpenAI from "openai";
 import "dotenv/config";
 
 // ================= CLIENT =================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages
   ],
+});
+
+// ================= GPT =================
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+const GPT_CHANNEL_ID = "1470060484425416815"; // ใส่ไอดีห้อง GPT
+
+// ================= READY =================
+client.once("ready", () => {
+  console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
 // ================= MESSAGE =================
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  // ---------- !search ----------
+  // ===== ค้นหาเบอร์ !search =====
   if (message.content.startsWith("!search")) {
     const phoneInput = message.content.split(" ")[1];
     if (!phoneInput) {
@@ -37,25 +65,36 @@ client.on("messageCreate", async (message) => {
       if (phone.getType() === "MOBILE") typeText = "มือถือ";
       if (phone.getType() === "FIXED_LINE") typeText = "บ้าน";
 
-      const result = `
-📞 เบอร์: ${phone.formatInternational()}
+      const result =
+`📞 เบอร์: ${phone.formatInternational()}
 🌍 ประเทศ: ${phone.country}
 📡 ประเภท: ${typeText}
 📶 ค่าย: ไม่สามารถระบุได้
-⚠️ เบอร์อาจมีการย้ายค่าย
-`;
+⚠️ เบอร์อาจมีการย้ายค่าย`;
+
       return message.reply("```" + result + "```");
-    } catch {
+    } catch (e) {
       return message.reply("❌ รูปแบบเบอร์ผิด");
     }
   }
 
-  // ---------- GPT AUTO CHAT ----------
-  if (message.channel.name === "gpt") {
-    // ตัวอย่าง GPT แบบง่าย (mock)
-    return message.reply(
-      "🤖 GPT: ตอนนี้กูตอบเฉพาะเรื่องโค้ด\nส่งคำถามมาได้เลย"
-    );
+  // ===== ห้อง GPT พิมพ์แล้วตอบทันที =====
+  if (message.channel.id === GPT_CHANNEL_ID) {
+    try {
+      await message.channel.sendTyping();
+      const res = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "ตอบเฉพาะเรื่องโค้ด โปรแกรม และเทคนิค" },
+          { role: "user", content: message.content }
+        ]
+      });
+      const reply = res.choices[0].message.content;
+      return message.reply(reply.slice(0, 2000));
+    } catch (e) {
+      console.error(e);
+      return message.reply("❌ GPT มีปัญหา / API พัง");
+    }
   }
 });
 
