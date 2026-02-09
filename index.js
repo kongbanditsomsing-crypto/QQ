@@ -17,6 +17,7 @@ import {
   NoSubscriberBehavior
 } from "@discordjs/voice";
 
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import "dotenv/config";
 
 // ================= CLIENT =================
@@ -29,6 +30,41 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages
   ],
+});
+
+// ================= !search =================
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+  if (!message.content.startsWith("!search")) return;
+
+  const phoneInput = message.content.split(" ")[1];
+  if (!phoneInput) {
+    return message.reply("❌ ใช้แบบนี้: `!search 0812345678`");
+  }
+
+  try {
+    const phone = parsePhoneNumberFromString(phoneInput, "TH");
+
+    if (!phone || !phone.isValid()) {
+      return message.reply("❌ เบอร์ไม่ถูกต้อง");
+    }
+
+    let typeText = "อื่น ๆ / VoIP";
+    if (phone.getType() === "MOBILE") typeText = "มือถือ";
+    if (phone.getType() === "FIXED_LINE") typeText = "บ้าน";
+
+    const result = `
+📞 เบอร์: ${phone.formatInternational()}
+🌍 ประเทศ: ${phone.country}
+📡 ประเภท: ${typeText}
+📶 ค่าย: ไม่สามารถระบุได้
+⚠️ เบอร์อาจมีการย้ายค่าย
+`;
+
+    message.reply("```" + result + "```");
+  } catch (e) {
+    message.reply("❌ รูปแบบเบอร์ผิด");
+  }
 });
 
 // ================= CONFIG =================
