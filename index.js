@@ -1,21 +1,7 @@
 import {
   Client,
-  GatewayIntentBits,
-  ChannelType,
-  PermissionsBitField,
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle
+  GatewayIntentBits
 } from "discord.js";
-
-import {
-  joinVoiceChannel,
-  createAudioPlayer,
-  VoiceConnectionStatus,
-  entersState,
-  NoSubscriberBehavior
-} from "@discordjs/voice";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import "dotenv/config";
@@ -24,46 +10,52 @@ import "dotenv/config";
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages
   ],
 });
 
-// ================= !search =================
+// ================= MESSAGE =================
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
-  if (!message.content.startsWith("!search")) return;
 
-  const phoneInput = message.content.split(" ")[1];
-  if (!phoneInput) {
-    return message.reply("❌ ใช้แบบนี้: `!search 0812345678`");
-  }
-
-  try {
-    const phone = parsePhoneNumberFromString(phoneInput, "TH");
-
-    if (!phone || !phone.isValid()) {
-      return message.reply("❌ เบอร์ไม่ถูกต้อง");
+  // ---------- !search ----------
+  if (message.content.startsWith("!search")) {
+    const phoneInput = message.content.split(" ")[1];
+    if (!phoneInput) {
+      return message.reply("❌ ใช้แบบนี้: `!search 0812345678`");
     }
 
-    let typeText = "อื่น ๆ / VoIP";
-    if (phone.getType() === "MOBILE") typeText = "มือถือ";
-    if (phone.getType() === "FIXED_LINE") typeText = "บ้าน";
+    try {
+      const phone = parsePhoneNumberFromString(phoneInput, "TH");
+      if (!phone || !phone.isValid()) {
+        return message.reply("❌ เบอร์ไม่ถูกต้อง");
+      }
 
-    const result = `
+      let typeText = "อื่น ๆ / VoIP";
+      if (phone.getType() === "MOBILE") typeText = "มือถือ";
+      if (phone.getType() === "FIXED_LINE") typeText = "บ้าน";
+
+      const result = `
 📞 เบอร์: ${phone.formatInternational()}
 🌍 ประเทศ: ${phone.country}
 📡 ประเภท: ${typeText}
 📶 ค่าย: ไม่สามารถระบุได้
 ⚠️ เบอร์อาจมีการย้ายค่าย
 `;
+      return message.reply("```" + result + "```");
+    } catch {
+      return message.reply("❌ รูปแบบเบอร์ผิด");
+    }
+  }
 
-    message.reply("```" + result + "```");
-  } catch (e) {
-    message.reply("❌ รูปแบบเบอร์ผิด");
+  // ---------- GPT AUTO CHAT ----------
+  if (message.channel.name === "gpt") {
+    // ตัวอย่าง GPT แบบง่าย (mock)
+    return message.reply(
+      "🤖 GPT: ตอนนี้กูตอบเฉพาะเรื่องโค้ด\nส่งคำถามมาได้เลย"
+    );
   }
 });
 
