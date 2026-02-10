@@ -54,7 +54,7 @@ client.on("messageCreate", async (message) => {
     if (phone.getType() === "FIXED_LINE") typeText = "บ้าน";
 
     const result = `
-📞 เบอร์: ${phone.formatInternational()}
+📞 เบอร์: $ {phonenumbers.format_number(num, phonenumbers.PhoneNumberFormat.INTERNATIONAL)}
 🌍 ประเทศ: ${geocoder.description_for_number(num, "th")}
 📡 ประเภท: ${typeText}
 📶 ค่าย: ${carrier.name_for_number(num, "th")}
