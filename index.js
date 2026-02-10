@@ -18,20 +18,7 @@ import {
 } from "@discordjs/voice";
 
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-import pkg from "google-libphonenumber";
 import "dotenv/config";
-
-// ===== google-libphonenumber setup =====
-const {
-  PhoneNumberUtil,
-  PhoneNumberFormat,
-  PhoneNumberToCarrierMapper,
-  PhoneNumberOfflineGeocoder
-} = pkg;
-
-const phoneUtil = PhoneNumberUtil.getInstance();
-const carrier = PhoneNumberToCarrierMapper.getInstance();
-const geocoder = PhoneNumberOfflineGeocoder.getInstance();
 
 // ================= CLIENT =================
 const client = new Client({
