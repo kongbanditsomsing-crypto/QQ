@@ -43,26 +43,34 @@ client.on("messageCreate", async (message) => {
   }
 
   try {
-    const phone = parsePhoneNumberFromString(phoneInput, "TH");
+    // แปลงเบอร์ 0xxx → +66xxx
+    let raw = phoneInput.trim();
+    if (raw.startsWith("0")) {
+      raw = "+66" + raw.slice(1);
+    }
 
+    const phone = parsePhoneNumberFromString(raw, "TH");
     if (!phone || !phone.isValid()) {
       return message.reply("❌ เบอร์ไม่ถูกต้อง");
     }
 
-    let typeText = "อื่น ๆ / VoIP";
+    const num = phone.number;
+
+    let typeText = "อื่นๆ / VoIP";
     if (phone.getType() === "MOBILE") typeText = "มือถือ";
     if (phone.getType() === "FIXED_LINE") typeText = "บ้าน";
 
     const result = `
-📞 เบอร์: $ {phonenumbers.format_number(num, phonenumbers.PhoneNumberFormat.INTERNATIONAL)}
+📞 เบอร์: ${phone.formatInternational()}
 🌍 ประเทศ: ${geocoder.description_for_number(num, "th")}
-📡 ประเภท: ${typeText}
+📱 ประเภท: ${typeText}
 📶 ค่าย: ${carrier.name_for_number(num, "th")}
 ⚠️ เบอร์อาจมีการย้ายค่าย
-`;
+    `;
 
     message.reply("```" + result + "```");
   } catch (e) {
+    console.error(e);
     message.reply("❌ รูปแบบเบอร์ผิด");
   }
 });
