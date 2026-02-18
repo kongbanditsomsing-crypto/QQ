@@ -20,6 +20,9 @@ import {
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import "dotenv/config";
 
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
+
 // ================= CLIENT =================
 const client = new Client({
   intents: [
