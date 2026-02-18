@@ -65,7 +65,7 @@ client.on("messageCreate", async (message) => {
 
     const result = `
 📞 เบอร์: ${phone.formatInternational()}
-🌍 ประเทศ: ไทย
+🌍 ประเทศ: ไทยย
 📱 ประเภท: ${typeText}
 📶 ค่าย: ${carrier.name_for_number(num, "th")}
 ⚠️ เบอร์อาจมีการย้ายค่าย
