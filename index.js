@@ -421,7 +421,7 @@ client.on("interactionCreate", async (interaction) => {
 });
 
 // ================= READY =================
-client.on("ready", () => {
+client.once("clientReady", () => {
   console.log(`Bot online as ${client.user.tag}`);
 });
 
