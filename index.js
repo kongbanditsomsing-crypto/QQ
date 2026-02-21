@@ -428,4 +428,4 @@ client.once("clientReady", () => {
   console.log(`Bot online as ${client.user.tag}`);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.USER_TOKEN);
