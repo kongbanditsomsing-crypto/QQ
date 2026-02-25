@@ -144,7 +144,7 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.commandName === "dm") {
       const target = interaction.options.getUser("target");
       const text = interaction.options.getString("text");
-      const count = Math.min(interaction.options.getInteger("count") ?? 1, 99999); // 🔻 ลด loop
+      const count = Math.min(interaction.options.getInteger("count") ?? 1, 999999); // 🔻 ลด loop
 
       await interaction.reply({ content: "ยิงDmเเล้ว", ephemeral: true });
 
