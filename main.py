@@ -10,7 +10,7 @@ from discord.ext import commands, tasks
 from flask import Flask, request
 
 # --- CONFIGURATION ---
-ADMIN_IDS = [1127935823195668480, 1488103702488154173]
+ADMIN_IDS = [1467151829522579617, 1488103702488154173]
 DB_FILE = "users.json"
 
 # อ่านค่าจาก Environment Variables บน Render
