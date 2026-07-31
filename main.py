@@ -9,14 +9,17 @@ from discord import app_commands
 from discord.ext import commands, tasks
 from flask import Flask, request
 
+# --- CONFIGURATION ---
 ADMIN_IDS = [1127935823195668480, 1488103702488154173]
 DB_FILE = "users.json"
 
+# อ่านค่าจาก Environment Variables บน Render
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
-REDIRECT_URI = os.getenv("REDIRECT_URI") https://your-app.onrender.com/callback
+REDIRECT_URI = os.getenv("REDIRECT_URI") # เช่น https://your-app.onrender.com/callback
 
+# --- DATABASE MANAGEMENT ---
 def load_db():
     if not os.path.exists(DB_FILE):
         return {}
@@ -31,6 +34,7 @@ def save_db(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+# --- REFRESH TOKEN LOGIC ---
 async def refresh_oauth_token(user_id, refresh_token):
     url = "https://discord.com/api/v10/oauth2/token"
     data = {
@@ -56,11 +60,12 @@ async def refresh_oauth_token(user_id, refresh_token):
                 return None
 
 async def get_valid_access_token(user_id, user_info):
-    # สำหรับเรียกtokenถ้ามันหมด กันกูลืม
+    # ถ้า Token หมดอายุหรือกำลังจะหมดใน 5 นาที ให้ Refresh
     if time.time() >= user_info.get("expires_at", 0) - 300:
         return await refresh_oauth_token(user_id, user_info["refresh_token"])
     return user_info["access_token"]
 
+# --- FLASK WEB SERVER (OAuth2 Callback & Keep Alive 24/7) ---
 app = Flask(__name__)
 
 @app.route("/")
@@ -92,6 +97,7 @@ def callback():
     refresh_token = token_data["refresh_token"]
     expires_at = time.time() + token_data["expires_in"]
 
+    # ดึงข้อมูลผู้ใช้ที่ยินยอม
     user_res = requests.get(
         "https://discord.com/api/v10/users/@me",
         headers={"Authorization": f"Bearer {access_token}"}
@@ -103,6 +109,7 @@ def callback():
     user_id = str(user_info["id"])
     username = user_info["username"]
 
+    # บันทึกเข้า Database
     db = load_db()
     db[user_id] = {
         "access_token": access_token,
@@ -116,8 +123,8 @@ def callback():
     <html>
         <head><title>Success</title></head>
         <body style="background-color: #2c2f33; color: white; font-family: sans-serif; text-align: center; padding-top: 50px;">
-            <h1>ยืนยันตัวตนสำเร็จแล้ว</h1>
-            <p>สามารถออกจากหน้านี้ได้เเล้ว</p>
+            <h1>ยืนยันตัวตนสำเร็จแล้ว!</h1>
+            <p>คุณสามารถปิดหน้านี้และกลับไปที่ Discord ได้ทันที</p>
         </body>
     </html>
     """, 200
@@ -126,6 +133,7 @@ def run_flask():
     port = int(os.getenv("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
 
+# --- DISCORD BOT SETUP ---
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -140,6 +148,7 @@ async def on_ready():
     
     auto_refresh_loop.start()
 
+# Loop ตรวจสอบและ Refresh Token ทุกๆ 12 ชั่วโมงอัตโนมัติ
 @tasks.loop(hours=12)
 async def auto_refresh_loop():
     db = load_db()
@@ -147,7 +156,8 @@ async def auto_refresh_loop():
     for uid, udata in list(db.items()):
         await get_valid_access_token(uid, udata)
 
-@bot.tree.command(name="settoken", description="รับลิงค์เฉยๆไม่มีไร")
+# --- COMMAND 1: /settoken (สำหรับสมาชิกทุกคน) ---
+@bot.tree.command(name="settoken", description="รับลิงก์ยืนยันตัวตนเข้าร่วมระบบ")
 async def settoken(interaction: discord.Interaction):
     oauth_url = (
         f"https://discord.com/oauth2/authorize?client_id={CLIENT_ID}"
@@ -156,13 +166,13 @@ async def settoken(interaction: discord.Interaction):
     )
 
     embed = discord.Embed(
-        title="ระบบยืนยันตัวตนเข้าร่วมสมาชิก",
+        title="✨ ระบบยืนยันตัวตนเข้าร่วมสมาชิก",
         description=(
-            "กรุณากดปุ่ม **'ยืนยันตัวตน'** ด้านล่างเพื่อมอบสิทธิ์ให้บอท\n\n"
+            "กรุณากดปุ่ม **'ยืนยันตัวตน'** ด้านล่างเพื่อมอบสิทธิ์ให้ระบบ\n\n"
             "**สิทธิ์ที่ระบบขอ:**\n"
             "• เข้าถึงข้อมูลโปรไฟล์พื้นฐานของคุณ\n"
             "• ดึงคุณเข้าร่วมเซิร์ฟเวอร์ในเครืออัตโนมัติ\n\n"
-            "*ข้อมูล Refresh Token ของคุณจะถูกบันทึกไว้อย่างปลอดภัย*"
+            "*ข้อมูล Refresh Token ของคุณจะถูกบันทึกไว้อย่างปลอดภัยตลอดไป*"
         ),
         color=discord.Color.blue()
     )
@@ -175,21 +185,23 @@ async def settoken(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed, view=view)
 
+# --- COMMAND 2: /check (เฉพาะ 2 คนที่กำหนด) ---
 @bot.tree.command(name="check", description="ตรวจสอบจำนวนบัญชีทั้งหมดที่ให้สิทธิ์ไว้ (Admin Only)")
 async def check(interaction: discord.Interaction):
     if interaction.user.id not in ADMIN_IDS:
-        await interaction.response.send_message("คุณไม่มีสิทธิ์ใช้คำสั่งนี้", ephemeral=True)
+        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้", ephemeral=True)
         return
 
     db = load_db()
     total_users = len(db)
 
     embed = discord.Embed(
-        title="รายงานระบบฐานข้อมูลสมาชิก",
+        title="📊 รายงานระบบฐานข้อมูลสมาชิก",
         description=f"ปัจจุบันมีผู้ให้สิทธิ์บอททั้งหมด **{total_users}** บัญชี",
         color=discord.Color.green()
     )
     
+    # ดึงตัวอย่างรายชื่อ 10 คนแรก
     user_list = []
     for uid, udata in list(db.items())[:10]:
         user_list.append(f"• <@{uid}> (`{udata.get('username', 'N/A')}`)")
@@ -200,11 +212,12 @@ async def check(interaction: discord.Interaction):
     embed.set_footer(text="ข้อมูลนี้เห็นเฉพาะคุณคนเดียวเท่านั้น (Ephemeral)")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
+# --- COMMAND 3: /join (เฉพาะ 2 คนที่กำหนด) ---
 @bot.tree.command(name="join", description="ดึงคนเข้าเซิร์ฟเวอร์ที่กำหนด (Admin Only)")
-@app_commands.describe(guild_id="ID ของเซิร์ฟเวอร์", amount="จำนวนคนที่ต้องการดึง")
+@app_commands.describe(guild_id="ID ของเซิร์ฟเวอร์เป้าหมาย", amount="จำนวนคนที่ต้องการดึง")
 async def join(interaction: discord.Interaction, guild_id: str, amount: int):
     if interaction.user.id not in ADMIN_IDS:
-        await interaction.response.send_message("มึงไม่มีสิทธิ์ใช้คำสั่งนี้", ephemeral=True)
+        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้", ephemeral=True)
         return
 
     await interaction.response.defer(ephemeral=True)
@@ -231,6 +244,7 @@ async def join(interaction: discord.Interaction, guild_id: str, amount: int):
                 failed += 1
                 continue
 
+            # API ยิงดึงสมาชิกเข้า Guild
             url = f"https://discord.com/api/v10/guilds/{guild_id}/members/{uid}"
             headers = {
                 "Authorization": f"Bot {BOT_TOKEN}",
@@ -247,7 +261,7 @@ async def join(interaction: discord.Interaction, guild_id: str, amount: int):
                     failed += 1
 
     embed = discord.Embed(
-        title="สรุปผลการดึงสมาชิกเข้าเซิร์ฟเวอร์",
+        title="🚀 สรุปผลการดึงสมาชิกเข้าเซิร์ฟเวอร์",
         color=discord.Color.gold()
     )
     embed.add_field(name="🏰 เซิร์ฟเวอร์เป้าหมาย", value=f"**{guild_name}**\n(`{guild_id}`)", inline=False)
@@ -259,9 +273,10 @@ async def join(interaction: discord.Interaction, guild_id: str, amount: int):
 
     await interaction.followup.send(embed=embed, ephemeral=True)
 
+# --- START APPLICATION ---
 if __name__ == "__main__":
-    # รันกันดับ
+    # รัน Web Server บนอีก Thread
     threading.Thread(target=run_flask, daemon=True).start()
     
-    # .
+    # รัน Discord Bot
     bot.run(BOT_TOKEN)
