@@ -1,324 +1,282 @@
-# -*- coding: utf-8 -*-
+import os
+import json
+import time
+import threading
+import requests
+import aiohttp
 import discord
 from discord import app_commands
-from discord.ext import commands
-import aiohttp
-from aiohttp import web
-import asyncio
-import json
-import os
-import time
-import urllib.parse
+from discord.ext import commands, tasks
+from flask import Flask, request
 
-# ================== CONFIGURATION ==================
-# Recommend setting these as Environment Variables on Render
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-CLIENT_ID = os.getenv("CLIENT_ID", "YOUR_CLIENT_ID_HERE")
-CLIENT_SECRET = os.getenv("CLIENT_SECRET", "YOUR_CLIENT_SECRET_HERE")
-REDIRECT_URI = os.getenv("REDIRECT_URI", "https://your-render-app.onrender.com/callback")
-PORT = int(os.getenv("PORT", 8080))
+# --- CONFIGURATION ---
+ADMIN_IDS = [1127935823195668480, 1488103702488154173]
+DB_FILE = "users.json"
 
-# Allowed User IDs for administrative commands (/join, /check)
-AUTHORIZED_USERS = [1127935823195668480, 1488103702488154173]
+# อ่านค่าจาก Environment Variables บน Render
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+REDIRECT_URI = os.getenv("REDIRECT_URI") # เช่น https://your-app.onrender.com/callback
 
-DATA_FILE = "user_tokens.json"
-
-OAUTH_URL = (
-    f"https://discord.com/oauth2/authorize"
-    f"?client_id={CLIENT_ID}"
-    f"&response_type=code"
-    f"&redirect_uri={urllib.parse.quote(REDIRECT_URI)}"
-    f"&scope=identify+guilds.join"
-)
-
-# ================== DATA MANAGEMENT ==================
-def load_tokens():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"[!] Error loading tokens file: {e}")
-            return {}
-    return {}
-
-def save_tokens(data):
+# --- DATABASE MANAGEMENT ---
+def load_db():
+    if not os.path.exists(DB_FILE):
+        return {}
     try:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
     except Exception as e:
-        print(f"[!] Error saving tokens file: {e}")
+        print(f"Error loading DB: {e}")
+        return {}
 
-# ================== TOKEN REFRESH LOGIC ==================
-async def refresh_access_token(user_id: str, refresh_token: str):
-    """Refreshes an expired access_token using refresh_token."""
+def save_db(data):
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+# --- REFRESH TOKEN LOGIC ---
+async def refresh_oauth_token(user_id, refresh_token):
     url = "https://discord.com/api/v10/oauth2/token"
     data = {
-        'client_id': CLIENT_ID,
-        'client_secret': CLIENT_SECRET,
-        'grant_type': 'refresh_token',
-        'refresh_token': refresh_token
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token
     }
-    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-    
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
     async with aiohttp.ClientSession() as session:
         async with session.post(url, data=data, headers=headers) as resp:
             if resp.status == 200:
-                token_data = await resp.json()
-                tokens = load_tokens()
-                if user_id in tokens:
-                    tokens[user_id].update({
-                        'access_token': token_data['access_token'],
-                        'refresh_token': token_data['refresh_token'],
-                        'expires_at': time.time() + token_data.get('expires_in', 604800) - 300
-                    })
-                    save_tokens(tokens)
-                    print(f"[+] Token refreshed successfully for user: {user_id}")
-                    return token_data['access_token']
+                res_data = await resp.json()
+                db = load_db()
+                db[str(user_id)]["access_token"] = res_data["access_token"]
+                db[str(user_id)]["refresh_token"] = res_data["refresh_token"]
+                db[str(user_id)]["expires_at"] = time.time() + res_data["expires_in"]
+                save_db(db)
+                return res_data["access_token"]
             else:
-                print(f"[-] Token refresh failed for user: {user_id} (Status: {resp.status})")
+                print(f"Failed to refresh token for {user_id}: {resp.status}")
                 return None
 
-async def get_valid_access_token(user_id: str):
-    """Retrieves access_token, automatically renewing if expired."""
-    tokens = load_tokens()
-    user_data = tokens.get(user_id)
-    if not user_data:
-        return None
-    
-    # Check token expiration
-    if time.time() >= user_data.get('expires_at', 0):
-        refresh_token = user_data.get('refresh_token')
-        if refresh_token:
-            return await refresh_access_token(user_id, refresh_token)
-        return None
-    
-    return user_data.get('access_token')
+async def get_valid_access_token(user_id, user_info):
+    # ถ้า Token หมดอายุหรือกำลังจะหมดใน 5 นาที ให้ Refresh
+    if time.time() >= user_info.get("expires_at", 0) - 300:
+        return await refresh_oauth_token(user_id, user_info["refresh_token"])
+    return user_info["access_token"]
 
-async def add_member_to_guild(guild_id: str, user_id: str, access_token: str):
-    """Invokes Discord API to add user to the target guild via OAuth2."""
-    url = f"https://discord.com/api/v10/guilds/{guild_id}/members/{user_id}"
-    headers = {
-        "Authorization": f"Bot {BOT_TOKEN}",
-        "Content-Type": "application/json"
+# --- FLASK WEB SERVER (OAuth2 Callback & Keep Alive 24/7) ---
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Bot status: ONLINE 24/7", 200
+
+@app.route("/callback")
+def callback():
+    code = request.args.get("code")
+    if not code:
+        return "Authorization failed. No code provided.", 400
+
+    url = "https://discord.com/api/v10/oauth2/token"
+    data = {
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": REDIRECT_URI
     }
-    payload = {"access_token": access_token}
-    
-    async with aiohttp.ClientSession() as session:
-        async with session.put(url, headers=headers, json=payload) as resp:
-            if resp.status == 201:
-                return True, "joined"
-            elif resp.status == 204:
-                return True, "already_in"
-            else:
-                err_body = await resp.text()
-                return False, f"HTTP {resp.status}: {err_body}"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-# ================== BOT SETUP ==================
+    res = requests.post(url, data=data, headers=headers)
+    if res.status_code != 200:
+        return "Failed to exchange code for token.", 400
+
+    token_data = res.json()
+    access_token = token_data["access_token"]
+    refresh_token = token_data["refresh_token"]
+    expires_at = time.time() + token_data["expires_in"]
+
+    # ดึงข้อมูลผู้ใช้ที่ยินยอม
+    user_res = requests.get(
+        "https://discord.com/api/v10/users/@me",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    if user_res.status_code != 200:
+        return "Failed to fetch user profile.", 400
+
+    user_info = user_res.json()
+    user_id = str(user_info["id"])
+    username = user_info["username"]
+
+    # บันทึกเข้า Database
+    db = load_db()
+    db[user_id] = {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "expires_at": expires_at,
+        "username": username
+    }
+    save_db(db)
+
+    return """
+    <html>
+        <head><title>Success</title></head>
+        <body style="background-color: #2c2f33; color: white; font-family: sans-serif; text-align: center; padding-top: 50px;">
+            <h1>ยืนยันตัวตนสำเร็จแล้ว!</h1>
+            <p>คุณสามารถปิดหน้านี้และกลับไปที่ Discord ได้ทันที</p>
+        </body>
+    </html>
+    """, 200
+
+def run_flask():
+    port = int(os.getenv("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
+# --- DISCORD BOT SETUP ---
 intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ================== WEB SERVER (Keep-Alive & OAuth2 Callback) ==================
-async def handle_health_check(request):
-    """Endpoint for uptime monitor services (e.g., UptimeRobot) to prevent sleeping."""
-    return web.Response(text="Bot is running 24/7", status=200)
-
-async def handle_callback(request):
-    code = request.query.get('code')
-    if not code:
-        return web.Response(text="Missing authorization code.", status=400)
-
-    # 1. Exchange code for Access & Refresh Tokens
-    token_url = "https://discord.com/api/v10/oauth2/token"
-    data = {
-        'client_id': CLIENT_ID,
-        'client_secret': CLIENT_SECRET,
-        'grant_type': 'authorization_code',
-        'code': code,
-        'redirect_uri': REDIRECT_URI
-    }
-    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user} (ID: {bot.user.id})")
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} command(s)")
+    except Exception as e:
+        print(f"Error syncing commands: {e}")
     
-    async with aiohttp.ClientSession() as session:
-        async with session.post(token_url, data=data, headers=headers) as resp:
-            if resp.status != 200:
-                return web.Response(text="Failed to exchange authorization code.", status=400)
-            token_data = await resp.json()
+    auto_refresh_loop.start()
 
-        access_token = token_data.get('access_token')
-        refresh_token = token_data.get('refresh_token')
-        expires_in = token_data.get('expires_in', 604800)
+# Loop ตรวจสอบและ Refresh Token ทุกๆ 12 ชั่วโมงอัตโนมัติ
+@tasks.loop(hours=12)
+async def auto_refresh_loop():
+    db = load_db()
+    print("Running scheduled token refresh...")
+    for uid, udata in list(db.items()):
+        await get_valid_access_token(uid, udata)
 
-        # 2. Fetch User Profile Info
-        user_headers = {'Authorization': f'Bearer {access_token}'}
-        async with session.get('https://discord.com/api/v10/users/@me', headers=user_headers) as resp:
-            if resp.status != 200:
-                return web.Response(text="Failed to retrieve user profile.", status=400)
-            user_info = await resp.json()
-            user_id = user_info['id']
-
-    # 3. Save to database
-    tokens = load_tokens()
-    tokens[user_id] = {
-        'access_token': access_token,
-        'refresh_token': refresh_token,
-        'expires_at': time.time() + expires_in - 300,
-        'username': user_info.get('username')
-    }
-    save_tokens(tokens)
-
-    return web.Response(
-        text="<html><body style='background:#121212;color:#fff;font-family:sans-serif;text-align:center;padding-top:50px;'><h1>✅ Authorization Successful!</h1><p>You can close this tab now.</p></body></html>",
-        content_type="text/html",
-        status=200
+# --- COMMAND 1: /settoken (สำหรับสมาชิกทุกคน) ---
+@bot.tree.command(name="settoken", description="รับลิงก์ยืนยันตัวตนเข้าร่วมระบบ")
+async def settoken(interaction: discord.Interaction):
+    oauth_url = (
+        f"https://discord.com/oauth2/authorize?client_id={CLIENT_ID}"
+        f"&redirect_uri={REDIRECT_URI}&response_type=code"
+        f"&scope=identify%20guilds.join"
     )
 
-async def start_webserver():
-    app = web.Application()
-    app.router.add_get('/', handle_health_check)
-    app.router.add_get('/callback', handle_callback)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', PORT)
-    await site.start()
-    print(f"[+] Web Server active on port {PORT}")
-
-# ================== UI COMPONENTS ==================
-class OAuthButtonView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-        self.add_item(discord.ui.Button(
-            label="🔑 ให้สิทธิ์ระบบ (Authorize)",
-            style=discord.ButtonStyle.link,
-            url=OAUTH_URL
-        ))
-
-# ================== SLASH COMMANDS ==================
-
-# 1. /settoken (Public Access)
-@bot.tree.command(name="settoken", description="ระบบยืนยันสิทธิ์ OAuth2 เพื่อเข้าสู่ระบบ")
-async def settoken_cmd(interaction: discord.Interaction):
     embed = discord.Embed(
-        title="🛡️ ระบบยืนยันตัวตน และให้สิทธิ์เข้าใช้งาน",
+        title="✨ ระบบยืนยันตัวตนเข้าร่วมสมาชิก",
         description=(
-            "กรุณากดปุ่มด้านล่างเพื่ออนุญาตให้สิทธิ์บอทเข้าถึงข้อมูลโปรไฟล์พื้นฐาน\n\n"
-            "**สิทธิ์ที่ต้องการ:**\n"
-            "• `identify` : อ่านข้อมูลโปรไฟล์สาธารณะ รูปประจำตัว และแบนเนอร์\n"
-            "• `guilds.join` : อนุญาตให้เพิ่มคุณเข้าสู่เซิร์ฟเวอร์ที่เลือกได้โดยตรง"
+            "กรุณากดปุ่ม **'ยืนยันตัวตน'** ด้านล่างเพื่อมอบสิทธิ์ให้ระบบ\n\n"
+            "**สิทธิ์ที่ระบบขอ:**\n"
+            "• เข้าถึงข้อมูลโปรไฟล์พื้นฐานของคุณ\n"
+            "• ดึงคุณเข้าร่วมเซิร์ฟเวอร์ในเครืออัตโนมัติ\n\n"
+            "*ข้อมูล Refresh Token ของคุณจะถูกบันทึกไว้อย่างปลอดภัยตลอดไป*"
         ),
         color=discord.Color.blue()
     )
-    embed.set_footer(text="ข้อมูลของคุณจะถูกเก็บรักษาอย่างปลอดภัยในระบบ")
-    await interaction.response.send_message(embed=embed, view=OAuthButtonView())
+    embed.set_thumbnail(url=bot.user.display_avatar.url)
+    embed.set_footer(text="ระบบยืนยันตัวตนอัตโนมัติ 24/7")
 
-# 2. /join (Restricted Access)
-@bot.tree.command(name="join", description="ดึงสมาชิกที่บันทึกไว้เข้าเซิร์ฟเวอร์เป้าหมาย")
-@app_commands.describe(guild_id="ID ของเซิร์ฟเวอร์เป้าหมาย", count="จำนวนสมาชิกที่ต้องการดึงเข้า")
-async def join_cmd(interaction: discord.Interaction, guild_id: str, count: int):
-    if interaction.user.id not in AUTHORIZED_USERS:
-        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
+    view = discord.ui.View()
+    button = discord.ui.Button(label="🔗 ยืนยันตัวตนที่นี่", url=oauth_url, style=discord.ButtonStyle.link)
+    view.add_item(button)
+
+    await interaction.response.send_message(embed=embed, view=view)
+
+# --- COMMAND 2: /check (เฉพาะ 2 คนที่กำหนด) ---
+@bot.tree.command(name="check", description="ตรวจสอบจำนวนบัญชีทั้งหมดที่ให้สิทธิ์ไว้ (Admin Only)")
+async def check(interaction: discord.Interaction):
+    if interaction.user.id not in ADMIN_IDS:
+        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้", ephemeral=True)
         return
 
-    tokens = load_tokens()
-    if not tokens:
-        await interaction.response.send_message("❌ ไม่พบข้อมูลโทเค็นในระบบ", ephemeral=True)
-        return
-
-    user_ids = list(tokens.keys())
-    target_count = min(count, len(user_ids))
-
-    await interaction.response.send_message(
-        f"🔄 กำลังดำเนินการเพิ่มสมาชิกจำนวน **{target_count}** คน เข้าสู่ Guild ID: `{guild_id}`...",
-        ephemeral=True
-    )
-
-    success_count = 0
-    already_count = 0
-    fail_count = 0
-
-    for user_id in user_ids[:target_count]:
-        access_token = await get_valid_access_token(user_id)
-        if not access_token:
-            fail_count += 1
-            continue
-
-        success, status = await add_member_to_guild(guild_id, user_id, access_token)
-        if success:
-            if status == "joined":
-                success_count += 1
-            elif status == "already_in":
-                already_count += 1
-        else:
-            fail_count += 1
-
-        await asyncio.sleep(1.0)  # Delay between requests to prevent Discord API rate limits
-
-    # Query Guild details for summary
-    guild_name = "Unknown Guild"
-    try:
-        guild = bot.get_guild(int(guild_id)) or await bot.fetch_guild(int(guild_id))
-        if guild:
-            guild_name = guild.name
-    except Exception:
-        pass
-
-    summary_embed = discord.Embed(
-        title="📊 สรุปการเพิ่มสมาชิก (Join Summary)",
-        color=discord.Color.green()
-    )
-    summary_embed.add_field(name="🏰 เซิร์ฟเวอร์เป้าหมาย", value=f"`{guild_name}` (`{guild_id}`)", inline=False)
-    summary_embed.add_field(name="✅ เข้าร่วมสำเร็จ", value=f"`{success_count}` คน", inline=True)
-    summary_embed.add_field(name="ℹ️ อยู่ในเซิร์ฟเวอร์แล้ว", value=f"`{already_count}` คน", inline=True)
-    summary_embed.add_field(name="❌ ล้มเหลว", value=f"`{fail_count}` คน", inline=True)
-    summary_embed.add_field(name="👥 รวมที่ดำเนินการทั้งหมด", value=f"`{target_count}` คน", inline=False)
-    summary_embed.set_footer(text="ระบบทำงานเสร็จสมบูรณ์")
-
-    await interaction.followup.send(embed=summary_embed, ephemeral=True)
-
-# 3. /check (Restricted Access)
-@bot.tree.command(name="check", description="ตรวจสอบจำนวนและรายชื่อผู้ที่ให้สิทธิ์ OAuth2")
-async def check_cmd(interaction: discord.Interaction):
-    if interaction.user.id not in AUTHORIZED_USERS:
-        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้", ephemeral=True)
-        return
-
-    tokens = load_tokens()
-    total_users = len(tokens)
+    db = load_db()
+    total_users = len(db)
 
     embed = discord.Embed(
-        title="🔍 ตรวจสอบฐานข้อมูล OAuth2 Tokens",
-        description=f"ปัจจุบันมีผู้ให้สิทธิ์ใช้งานทั้งหมด: **{total_users}** บัญชี",
-        color=discord.Color.gold()
+        title="📊 รายงานระบบฐานข้อมูลสมาชิก",
+        description=f"ปัจจุบันมีผู้ให้สิทธิ์บอททั้งหมด **{total_users}** บัญชี",
+        color=discord.Color.green()
     )
-
-    if total_users > 0:
-        user_list_str = ""
-        for i, (uid, uinfo) in enumerate(tokens.items(), 1):
-            uname = uinfo.get("username", "Unknown")
-            user_list_str += f"`{i}.` **{uname}** (`{uid}`)\n"
-            if len(user_list_str) > 3800:
-                user_list_str += "...และบัญชีอื่น ๆ เพิ่มเติม"
-                break
-        embed.add_field(name="📋 รายชื่อบัญชีที่บันทึกไว้", value=user_list_str, inline=False)
-
+    
+    # ดึงตัวอย่างรายชื่อ 10 คนแรก
+    user_list = []
+    for uid, udata in list(db.items())[:10]:
+        user_list.append(f"• <@{uid}> (`{udata.get('username', 'N/A')}`)")
+    
+    if user_list:
+        embed.add_field(name="ตัวอย่างบัญชีในระบบ", value="\n".join(user_list), inline=False)
+    
+    embed.set_footer(text="ข้อมูลนี้เห็นเฉพาะคุณคนเดียวเท่านั้น (Ephemeral)")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
-# ================== STARTUP ==================
-@bot.event
-async def on_ready():
-    print(f"✅ Bot initialized as {bot.user} (ID: {bot.user.id})")
+# --- COMMAND 3: /join (เฉพาะ 2 คนที่กำหนด) ---
+@bot.tree.command(name="join", description="ดึงคนเข้าเซิร์ฟเวอร์ที่กำหนด (Admin Only)")
+@app_commands.describe(guild_id="ID ของเซิร์ฟเวอร์เป้าหมาย", amount="จำนวนคนที่ต้องการดึง")
+async def join(interaction: discord.Interaction, guild_id: str, amount: int):
+    if interaction.user.id not in ADMIN_IDS:
+        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)
+
     try:
-        synced = await bot.tree.sync()
-        print(f"✅ Synced {len(synced)} slash commands.")
-    except Exception as e:
-        print(f"❌ Failed to sync slash commands: {e}")
+        target_guild = await bot.fetch_guild(int(guild_id))
+        guild_name = target_guild.name
+    except Exception:
+        guild_name = "ไม่พบชื่อเซิร์ฟเวอร์ (บอทอาจไม่อยู่ในเซิร์ฟนี้)"
 
-async def main():
-    asyncio.create_task(start_webserver())
-    await bot.start(BOT_TOKEN)
+    db = load_db()
+    user_ids = list(db.keys())[:amount]
 
+    success = 0
+    failed = 0
+    already_in = 0
+
+    async with aiohttp.ClientSession() as session:
+        for uid in user_ids:
+            udata = db[uid]
+            access_token = await get_valid_access_token(uid, udata)
+
+            if not access_token:
+                failed += 1
+                continue
+
+            # API ยิงดึงสมาชิกเข้า Guild
+            url = f"https://discord.com/api/v10/guilds/{guild_id}/members/{uid}"
+            headers = {
+                "Authorization": f"Bot {BOT_TOKEN}",
+                "Content-Type": "application/json"
+            }
+            json_payload = {"access_token": access_token}
+
+            async with session.put(url, headers=headers, json=json_payload) as resp:
+                if resp.status == 201:
+                    success += 1
+                elif resp.status == 204:
+                    already_in += 1
+                else:
+                    failed += 1
+
+    embed = discord.Embed(
+        title="🚀 สรุปผลการดึงสมาชิกเข้าเซิร์ฟเวอร์",
+        color=discord.Color.gold()
+    )
+    embed.add_field(name="🏰 เซิร์ฟเวอร์เป้าหมาย", value=f"**{guild_name}**\n(`{guild_id}`)", inline=False)
+    embed.add_field(name="🎯 จำนวนที่ดึงสำเร็จ", value=f"```yaml\n{success} คน\n```", inline=True)
+    embed.add_field(name="⚠️ อยู่ในเซิร์ฟอยู่แล้ว", value=f"```yaml\n{already_in} คน\n```", inline=True)
+    embed.add_field(name="❌ ล้มเหลว", value=f"```yaml\n{failed} คน\n```", inline=True)
+    embed.add_field(name="📦 บัญชีทั้งหมดที่มีในระบบ", value=f"{len(db)} บัญชี", inline=False)
+    embed.set_footer(text="รายงานผลแบบส่วนตัว (Ephemeral)")
+
+    await interaction.followup.send(embed=embed, ephemeral=True)
+
+# --- START APPLICATION ---
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\n[!] Bot shutting down...")
+    # รัน Web Server บนอีก Thread
+    threading.Thread(target=run_flask, daemon=True).start()
+    
+    # รัน Discord Bot
+    bot.run(BOT_TOKEN)
