@@ -196,14 +196,14 @@ async def check(interaction: discord.Interaction):
     total_users = len(db)
 
     embed = discord.Embed(
-        title="รายงานระบบฐานข้อมูลสมาชิกִ ࣪𖤐",
+        title="รายงานระบบฐานข้อมูลสมาชิก𝜗ৎ",
         description=f"ปัจจุบันมีผู้ให้สิทธิ์บอททั้งหมด **{total_users}** บัญชี",
         color=discord.Color.green()
     )
     
     # ดึงตัวอย่างรายชื่อ 10 คนแรก
     user_list = []
-    for uid, udata in list(db.items())[23]:
+    for uid, udata in list(db.items())[15]:
         user_list.append(f"• <@{uid}> (`{udata.get('username', 'N/A')}`)")
     
     if user_list:
