@@ -123,8 +123,8 @@ def callback():
     <html>
         <head><title>Success</title></head>
         <body style="background-color: #2c2f33; color: white; font-family: sans-serif; text-align: center; padding-top: 50px;">
-            <h1>ยืนยันตัวตนสำเร็จแล้ว!</h1>
-            <p>คุณสามารถปิดหน้านี้และกลับไปที่ Discord ได้ทันที</p>
+            <h1>ยืนยันตัวตนสำเร็จแล้ว</h1>
+            <p>คุณสามารถปิดหน้าได้เเล้ว</p>
         </body>
     </html>
     """, 200
@@ -157,7 +157,7 @@ async def auto_refresh_loop():
         await get_valid_access_token(uid, udata)
 
 # --- COMMAND 1: /settoken (สำหรับสมาชิกทุกคน) ---
-@bot.tree.command(name="settoken", description="รับลิงก์ยืนยันตัวตนเข้าร่วมระบบ")
+@bot.tree.command(name="settoken", description="รับลิงก์เฉยๆ")
 async def settoken(interaction: discord.Interaction):
     oauth_url = (
         f"https://discord.com/oauth2/authorize?client_id={CLIENT_ID}"
@@ -166,13 +166,13 @@ async def settoken(interaction: discord.Interaction):
     )
 
     embed = discord.Embed(
-        title="✨ ระบบยืนยันตัวตนเข้าร่วมสมาชิก",
+        title="ระบบยืนยันตัวตนเข้าร่วมสมาชิก🪽་༘",
         description=(
-            "กรุณากดปุ่ม **'ยืนยันตัวตน'** ด้านล่างเพื่อมอบสิทธิ์ให้ระบบ\n\n"
+            "กรุณากดปุ่ม **'ยืนยันตัวตน'** ด้านล่างเพื่อมอบสิทธิ์\n\n"
             "**สิทธิ์ที่ระบบขอ:**\n"
             "• เข้าถึงข้อมูลโปรไฟล์พื้นฐานของคุณ\n"
             "• ดึงคุณเข้าร่วมเซิร์ฟเวอร์ในเครืออัตโนมัติ\n\n"
-            "*ข้อมูล Refresh Token ของคุณจะถูกบันทึกไว้อย่างปลอดภัยตลอดไป*"
+            "*ข้อมูล Refresh Token ของคุณจะถูกบันทึกไว้อย่างปลอดภัย*"
         ),
         color=discord.Color.blue()
     )
@@ -180,7 +180,7 @@ async def settoken(interaction: discord.Interaction):
     embed.set_footer(text="ระบบยืนยันตัวตนอัตโนมัติ 24/7")
 
     view = discord.ui.View()
-    button = discord.ui.Button(label="🔗 ยืนยันตัวตนที่นี่", url=oauth_url, style=discord.ButtonStyle.link)
+    button = discord.ui.Button(label="ยืนยันตัวตนที่นี่.☘︎ ݁˖", url=oauth_url, style=discord.ButtonStyle.link)
     view.add_item(button)
 
     await interaction.response.send_message(embed=embed, view=view)
@@ -189,35 +189,35 @@ async def settoken(interaction: discord.Interaction):
 @bot.tree.command(name="check", description="ตรวจสอบจำนวนบัญชีทั้งหมดที่ให้สิทธิ์ไว้ (Admin Only)")
 async def check(interaction: discord.Interaction):
     if interaction.user.id not in ADMIN_IDS:
-        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้", ephemeral=True)
+        await interaction.response.send_message("มึงไม่มีสิทธิ์ใช้คำสั่งนี้˙𐃷˙", ephemeral=True)
         return
 
     db = load_db()
     total_users = len(db)
 
     embed = discord.Embed(
-        title="📊 รายงานระบบฐานข้อมูลสมาชิก",
+        title="รายงานระบบฐานข้อมูลสมาชิกִ ࣪𖤐",
         description=f"ปัจจุบันมีผู้ให้สิทธิ์บอททั้งหมด **{total_users}** บัญชี",
         color=discord.Color.green()
     )
     
     # ดึงตัวอย่างรายชื่อ 10 คนแรก
     user_list = []
-    for uid, udata in list(db.items())[:10]:
+    for uid, udata in list(db.items())[23]:
         user_list.append(f"• <@{uid}> (`{udata.get('username', 'N/A')}`)")
     
     if user_list:
         embed.add_field(name="ตัวอย่างบัญชีในระบบ", value="\n".join(user_list), inline=False)
     
-    embed.set_footer(text="ข้อมูลนี้เห็นเฉพาะคุณคนเดียวเท่านั้น (Ephemeral)")
+    embed.set_footer(text="ข้อมูลบางส่วน")
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
 # --- COMMAND 3: /join (เฉพาะ 2 คนที่กำหนด) ---
-@bot.tree.command(name="join", description="ดึงคนเข้าเซิร์ฟเวอร์ที่กำหนด (Admin Only)")
-@app_commands.describe(guild_id="ID ของเซิร์ฟเวอร์เป้าหมาย", amount="จำนวนคนที่ต้องการดึง")
+@bot.tree.command(name="join", description="ดึงคนเข้าเซิร์ฟ (Admin Only)")
+@app_commands.describe(guild_id="ID ของเซิร์ฟเวอร์", amount="จำนวนคนที่ต้องการดึง")
 async def join(interaction: discord.Interaction, guild_id: str, amount: int):
     if interaction.user.id not in ADMIN_IDS:
-        await interaction.response.send_message("❌ คุณไม่มีสิทธิ์ใช้คำสั่งนี้", ephemeral=True)
+        await interaction.response.send_message("มึงไม่มีสิทธิ์ใช้คำสั่งนี้˙𐃷˙", ephemeral=True)
         return
 
     await interaction.response.defer(ephemeral=True)
@@ -226,7 +226,7 @@ async def join(interaction: discord.Interaction, guild_id: str, amount: int):
         target_guild = await bot.fetch_guild(int(guild_id))
         guild_name = target_guild.name
     except Exception:
-        guild_name = "ไม่พบชื่อเซิร์ฟเวอร์ (บอทอาจไม่อยู่ในเซิร์ฟนี้)"
+        guild_name = "ไม่เจอเซิร์ฟเวอร์ บอทอาจไม่อยู่ในเซิร์ฟนีִ้ ࣪𖤐"
 
     db = load_db()
     user_ids = list(db.keys())[:amount]
@@ -261,15 +261,15 @@ async def join(interaction: discord.Interaction, guild_id: str, amount: int):
                     failed += 1
 
     embed = discord.Embed(
-        title="🚀 สรุปผลการดึงสมาชิกเข้าเซิร์ฟเวอร์",
+        title="สรุปการดึงสมาชิกเข้าเซิร์ฟเวอร์𓈒𓍼𓏸",
         color=discord.Color.gold()
     )
-    embed.add_field(name="🏰 เซิร์ฟเวอร์เป้าหมาย", value=f"**{guild_name}**\n(`{guild_id}`)", inline=False)
-    embed.add_field(name="🎯 จำนวนที่ดึงสำเร็จ", value=f"```yaml\n{success} คน\n```", inline=True)
-    embed.add_field(name="⚠️ อยู่ในเซิร์ฟอยู่แล้ว", value=f"```yaml\n{already_in} คน\n```", inline=True)
-    embed.add_field(name="❌ ล้มเหลว", value=f"```yaml\n{failed} คน\n```", inline=True)
-    embed.add_field(name="📦 บัญชีทั้งหมดที่มีในระบบ", value=f"{len(db)} บัญชี", inline=False)
-    embed.set_footer(text="รายงานผลแบบส่วนตัว (Ephemeral)")
+    embed.add_field(name="เซิร์ฟเวอร์⊹ ࣪ ˖", value=f"**{guild_name}**\n(`{guild_id}`)", inline=False)
+    embed.add_field(name="จำนวนที่ดึงสำเร็จ˙ᵕ˙", value=f"```yaml\n{success} คน\n```", inline=True)
+    embed.add_field(name="อยู่ในเซิร์ฟอยู่แล้ว𝜗ৎ", value=f"```yaml\n{already_in} คน\n```", inline=True)
+    embed.add_field(name="ไม่สำเร็จ𓂃 𓈒𓏸", value=f"```yaml\n{failed} คน\n```", inline=True)
+    embed.add_field(name="บัญชีทั้งหมดที่มีในระบบ.𖥔 ݁ ˖", value=f"{len(db)} บัญชี", inline=False)
+    embed.set_footer(text="all")
 
     await interaction.followup.send(embed=embed, ephemeral=True)
 
