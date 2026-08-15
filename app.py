@@ -37,7 +37,7 @@ class MyClient(discord.Client):
 
         activity = discord.Streaming(
             name=stream_name,
-            url="https://www.twitch.tv/your_channel",  # ใส่ Twitch หลอกๆ ให้ Discord รู้ว่าเป็น Stream
+            url="https://www.twitch.tv/CSkY2p9q8",  # ใส่ Twitch หลอกๆ ให้ Discord รู้ว่าเป็น Stream
             details=stream_details,
             state=stream_state,
             # การตั้งค่ารูป GIF สำหรับแบนเนอร์สตรีม
