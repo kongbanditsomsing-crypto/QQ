@@ -18,8 +18,8 @@ class MyClient(discord.Client):
         # สถานะที่จะเปลี่ยนไปเรื่อยๆ ทุก 3 วิ
         self.status_messages = [
             "https://discord.gg/CSkY2p9q8",
-            "⏔⏔⏔ ꒰ ᧔ෆ᧓ ꒱ ⏔⏔⏔",
-            "ϐִִׂ໋֢࣪࣪ᦒ᩠ִׂ໋ׅ֗ȶׂׅ"
+            "ยิงแบบbot เเละ token",
+            "ȶִׂׅ࣪ᦒ᩠ִׂׅ࣪ƙָׂᧉ᩠֗ꪀ ִ໋࣪꯱ָׂ࣪℘ִִֺֹֹֹׂ࠭αׂׅׅ࣭࣪ꪑ // ϐִִׂ໋֢࣪࣪ᦒ᩠ִׂ໋ׅ֗ȶׂׅ"
         ]
         self.current_idx = 0
 
@@ -28,7 +28,7 @@ class MyClient(discord.Client):
 
         # --- ตั้งข้อความและชื่อสตรีม (อย่าลืมเช็กความยาวไม่เกิน 128 ตัว) ---
         stream_name = "ȶִׂׅ࣪ᦒ᩠ִׂׅ࣪ƙָׂᧉ᩠֗ꪀ ִ໋࣪꯱ָׂ࣪℘ִִֺֹֹֹׂ࠭αׂׅׅ࣭࣪ꪑ // ϐִִׂ໋֢࣪࣪ᦒ᩠ִׂ໋ׅ֗ȶׂׅ"
-        stream_details = "𐔌՞.https://discord.gg/5QCPEp5qf ִִֶָ🪽་༘ บริการยิงดิส"
+        stream_details = "𐔌՞.บริการยิงดิส"
         stream_state = "⏔⏔⏔ ꒰ ᧔ෆ᧓ ꒱ ⏔⏔⏔"
 
         # --- ใส่ URL GIF ของมึงตรงนี้! ---
