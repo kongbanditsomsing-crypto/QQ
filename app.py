@@ -18,7 +18,7 @@ class MyClient(discord.Client):
         # สถานะที่จะเปลี่ยนไปเรื่อยๆ ทุก 3 วิ
         self.status_messages = [
             "https://discord.gg/CSkY2p9q8",
-            "ยิงแบบbot เเละ token",
+            "รับดับรุ่นใหญ่",
             "ȶִׂׅ࣪ᦒ᩠ִׂׅ࣪ƙָׂᧉ᩠֗ꪀ ִ໋࣪꯱ָׂ࣪℘ִִֺֹֹֹׂ࠭αׂׅׅ࣭࣪ꪑ // ϐִִׂ໋֢࣪࣪ᦒ᩠ִׂ໋ׅ֗ȶׂׅ"
         ]
         self.current_idx = 0
@@ -33,7 +33,7 @@ class MyClient(discord.Client):
 
         # --- ใส่ URL GIF ของมึงตรงนี้! ---
         # ตัวอย่าง: "https://i.imgur.com/your_gif.gif"
-        gif_url = "https://i.imgur.com/your_gif.gif"  # <--- เปลี่ยนนี่เป็น URL จริงของมึง
+        gif_url = "https://cdn.discordapp.com/attachments/1489587803393364018/1538243693339742208/93f8d7c38a79b12bdef22c2f64bb6e8f.gif?ex=6a81f893&is=6a80a713&hm=3e73347975e06beacf2f6839ff9a04a7bf3aeabc0c9a9baa6ace0d67813e0281&"  # <--- เปลี่ยนนี่เป็น URL จริงของมึง
 
         activity = discord.Streaming(
             name=stream_name,
