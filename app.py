@@ -27,8 +27,8 @@ class MyClient(discord.Client):
         print(f"✅ ล็อกอินสำเร็จเป็น: {self.user}")
 
         # --- ตั้งข้อความและชื่อสตรีม (อย่าลืมเช็กความยาวไม่เกิน 128 ตัว) ---
-        stream_name = "𐔌՞.https://discord.gg/5QCPEp5qf ִִֶָ🪽་༘ บริการยิงดิส"
-        stream_details = "ִ໋֗ȶִׂׅ࣪ᦒ᩠ִׂׅ࣪ƙָׂᧉ᩠֗ꪀ ִ໋࣪꯱ָׂ࣪℘ִִֺֹֹֹׂ࠭αׂׅׅ࣭࣪ꪑ // ϐִִׂ໋֢࣪࣪ᦒ᩠ִׂ໋ׅ֗ȶׂׅ"
+        stream_name = "ȶִׂׅ࣪ᦒ᩠ִׂׅ࣪ƙָׂᧉ᩠֗ꪀ ִ໋࣪꯱ָׂ࣪℘ִִֺֹֹֹׂ࠭αׂׅׅ࣭࣪ꪑ // ϐִִׂ໋֢࣪࣪ᦒ᩠ִׂ໋ׅ֗ȶׂׅ"
+        stream_details = "𐔌՞.https://discord.gg/5QCPEp5qf ִִֶָ🪽་༘ บริการยิงดิส"
         stream_state = "⏔⏔⏔ ꒰ ᧔ෆ᧓ ꒱ ⏔⏔⏔"
 
         # --- ใส่ URL GIF ของมึงตรงนี้! ---
@@ -43,7 +43,7 @@ class MyClient(discord.Client):
             # การตั้งค่ารูป GIF สำหรับแบนเนอร์สตรีม
             assets={
                 "large_image": f"mp:external/{gif_url}",
-                "large_text": "Discord Raid Service"
+                "large_text": "ȶִׂׅ࣪ᦒ᩠ִׂׅ࣪ƙָׂᧉ᩠֗ꪀ ִ໋࣪꯱ָׂ࣪℘ִִֺֹֹֹׂ࠭αׂׅׅ࣭࣪ꪑ // ϐִִׂ໋֢࣪࣪ᦒ᩠ִׂ໋ׅ֗ȶׂׅ"
             }
         )
         
