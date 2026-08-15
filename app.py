@@ -18,7 +18,7 @@ class MyClient(discord.Client):
         # สถานะที่จะเปลี่ยนไปเรื่อยๆ ทุก 3 วิ
         self.status_messages = [
             "https://discord.gg/CSkY2p9q8",
-            "รับดับรุ่นใหญ่",
+            "fy C",
             "ȶִׂׅ࣪ᦒ᩠ִׂׅ࣪ƙָׂᧉ᩠֗ꪀ ִ໋࣪꯱ָׂ࣪℘ִִֺֹֹֹׂ࠭αׂׅׅ࣭࣪ꪑ // ϐִִׂ໋֢࣪࣪ᦒ᩠ִׂ໋ׅ֗ȶׂׅ"
         ]
         self.current_idx = 0
