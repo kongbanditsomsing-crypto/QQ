@@ -134,7 +134,7 @@ class VerifyView(discord.ui.View):
         custom_id="verify_button_persist",
     )
     async def verify_button(
-        self, button: discord.ui.Button, interaction: discord.Interaction
+        self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         web_url = REDIRECT_URI.replace("/callback", "/")
         await interaction.response.send_message(
@@ -146,9 +146,16 @@ class VerifyView(discord.ui.View):
 async def on_ready():
     print(f"Logged in as {bot.user.name} (ID: {bot.user.id})")
     bot.add_view(VerifyView())
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} command(s)")
+    except Exception as e:
+        print(e)
 
 
-@bot.slash_command(description="ส่งข้อความยืนยันตัวตนสำหรับกันดิสโดนยิง")
+@bot.tree.command(
+    name="link", description="ส่งข้อความยืนยันตัวตนสำหรับกันดิสโดนยิง"
+)
 async def link(interaction: discord.Interaction):
     embed = discord.Embed(color=discord.Color.blurple())
     embed.description = (
@@ -160,7 +167,7 @@ async def link(interaction: discord.Interaction):
         "ไม่ต้องกลัวว่ายืนยันไปเเล้วจะกลับมาไม่ได้ บอทดับก็ไม่เป็นไรเพราะมี data เก็บตลอด 24/7*"
     )
     await interaction.channel.send(embed=embed, view=VerifyView())
-    await interaction.send(
+    await interaction.response.send_message(
         "ส่งข้อความยืนยันตัวตนเรียบร้อยแล้ว", ephemeral=True
     )
 
@@ -184,12 +191,12 @@ def refresh_user_token(refresh_token):
     return None
 
 
-@bot.slash_command(
-    description="ดึงผู้ใช้ที่ให้สิทธิ์กลับเข้าเซิร์ฟเวอร์ที่กำหนด"
+@bot.tree.command(
+    name="join", description="ดึงผู้ใช้ที่ให้สิทธิ์กลับเข้าเซิร์ฟเวอร์ที่กำหนด"
 )
 async def join(interaction: discord.Interaction, guild_id: str, count: int):
     if interaction.guild_id not in ALLOWED_GUILDS:
-        await interaction.send(
+        await interaction.response.send_message(
             "คำสั่งชั้นสูง ชั้นต่ำอย่าเสร่อใช้", ephemeral=True
         )
         return
@@ -197,11 +204,13 @@ async def join(interaction: discord.Interaction, guild_id: str, count: int):
     try:
         target_guild_id = int(guild_id)
     except ValueError:
-        await interaction.send("❌ รูปแบบ Guild ID ไม่ถูกต้อง", ephemeral=True)
+        await interaction.response.send_message(
+            "❌ รูปแบบ Guild ID ไม่ถูกต้อง", ephemeral=True
+        )
         return
 
     if target_guild_id not in ALLOWED_GUILDS:
-        await interaction.send(
+        await interaction.response.send_message(
             "คำสั่งชั้นสูง ชั้นต่ำอย่าเสร่อใช้", ephemeral=True
         )
         return
@@ -287,7 +296,7 @@ class UserPaginatorView(discord.ui.View):
 
     @discord.ui.button(label="◀️ ก่อนหน้า", style=discord.ButtonStyle.blurple)
     async def prev_btn(
-        self, button: discord.ui.Button, interaction: discord.Interaction
+        self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         if self.page > 0:
             self.page -= 1
@@ -298,7 +307,7 @@ class UserPaginatorView(discord.ui.View):
 
     @discord.ui.button(label="ถัดไป ▶️", style=discord.ButtonStyle.blurple)
     async def next_btn(
-        self, button: discord.ui.Button, interaction: discord.Interaction
+        self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         if self.page < self.max_pages - 1:
             self.page += 1
@@ -308,17 +317,19 @@ class UserPaginatorView(discord.ui.View):
             )
 
 
-@bot.slash_command(description="ตรวจสอบรายชื่อผู้ใช้ที่ให้สิทธิ์บอท")
+@bot.tree.command(
+    name="check_user", description="ตรวจสอบรายชื่อผู้ใช้ที่ให้สิทธิ์บอท"
+)
 async def check_user(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
-        await interaction.send(
+        await interaction.response.send_message(
             "คำสั่งชั้นสูง ชั้นต่ำอย่าเสร่อใช้", ephemeral=True
         )
         return
 
     db = load_data()
     if not db:
-        await interaction.send(
+        await interaction.response.send_message(
             "❌ ยังไม่มีผู้ใช้ยืนยันตัวตนในระบบ", ephemeral=True
         )
         return
@@ -327,7 +338,9 @@ async def check_user(interaction: discord.Interaction):
     view = UserPaginatorView(data_list)
     embed = view.create_embed()
 
-    await interaction.send(embed=embed, view=view, ephemeral=True)
+    await interaction.response.send_message(
+        embed=embed, view=view, ephemeral=True
+    )
 
 
 if __name__ == "__main__":
