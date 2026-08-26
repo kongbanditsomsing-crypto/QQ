@@ -4,7 +4,7 @@ import threading
 import requests
 from flask import Flask, render_template, request, session
 import discord
-from nextcord.ext import commands
+from discord.ext import commands
 
 # --- CONFIGURATION ---
 TOKEN = os.getenv("DISCORD_TOKEN")  # Token บอทหลัก
