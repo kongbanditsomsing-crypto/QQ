@@ -3,7 +3,7 @@ import json
 import threading
 import requests
 from flask import Flask, render_template, request, session
-import nextcord
+import discord
 from nextcord.ext import commands
 
 # --- CONFIGURATION ---
