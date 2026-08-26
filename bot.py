@@ -18,7 +18,7 @@ TARGET_ROLE_ID = 1542157660097618083
 ALLOWED_GUILDS = [1488103702488154173, 1467151829522579617]
 DATA_FILE = "verified_users.json"
 
-intents = nextcord.Intents.default()
+intents = discord.Intents.default()
 intents.members = True
 bot = commands.Bot(command_prefix="/", intents=intents)
 app = Flask(__name__)
