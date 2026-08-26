@@ -7,12 +7,10 @@ import discord
 from discord.ext import commands
 
 # --- CONFIGURATION ---
-TOKEN = os.getenv("DISCORD_TOKEN")  # Token บอทหลัก
-CLIENT_ID = os.getenv("CLIENT_ID")  # Discord Client ID ของบอท
-CLIENT_SECRET = os.getenv("CLIENT_SECRET")  # Discord Client Secret
-REDIRECT_URI = os.getenv(
-    "REDIRECT_URI"
-)  # เช่น https://your-app.onrender.com/callback
+TOKEN = os.getenv("DISCORD_TOKEN")
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+REDIRECT_URI = os.getenv("REDIRECT_URI")
 
 TARGET_ROLE_ID = 1542157660097618083
 ALLOWED_GUILDS = [1488103702488154173, 1467151829522579617]
@@ -25,7 +23,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "super_secret_key_change_me")
 
 
-# --- DATA MANAGEMENT (Data ไม่ตกหล่น 24/7) ---
+# --- DATA MANAGEMENT ---
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -41,7 +39,7 @@ def save_data(data):
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 
-# --- FLASK WEB SERVER (OAuth2 & Callback) ---
+# --- FLASK WEB SERVER ---
 @app.route("/")
 def index():
     auth_url = (
@@ -95,7 +93,6 @@ def callback():
     save_data(db)
 
     bot.loop.create_task(post_verification_actions(user_id))
-
     return (
         "<h2>ยืนยันตัวตนสำเร็จ!</h2><p>คุณสามารถปิดหน้านี้และกลับไปที่ Discord ได้เลย"
         "</p>"
@@ -126,18 +123,18 @@ def run_flask():
 # --- DISCORD BOT VIEWS & COMMANDS ---
 
 
-class VerifyView(nextcord.ui.View):
+class VerifyView(discord.ui.View):
 
     def __init__(self):
         super().__init__(timeout=None)
 
-    @nextcord.ui.button(
+    @discord.ui.button(
         label="ยืนยันตัวตนให้สิทธิ์บอท",
-        style=nextcord.ButtonStyle.primary,
+        style=discord.ButtonStyle.primary,
         custom_id="verify_button_persist",
     )
     async def verify_button(
-        self, button: nextcord.ui.Button, interaction: nextcord.Interaction
+        self, button: discord.ui.Button, interaction: discord.Interaction
     ):
         web_url = REDIRECT_URI.replace("/callback", "/")
         await interaction.response.send_message(
@@ -151,10 +148,9 @@ async def on_ready():
     bot.add_view(VerifyView())
 
 
-# 1. คำสั่ง /link (ส่ง Embed ยืนยันตัวตน)
 @bot.slash_command(description="ส่งข้อความยืนยันตัวตนสำหรับกันดิสโดนยิง")
-async def link(interaction: nextcord.Interaction):
-    embed = nextcord.Embed(color=nextcord.Color.blurple())
+async def link(interaction: discord.Interaction):
+    embed = discord.Embed(color=discord.Color.blurple())
     embed.description = (
         f"กดปุ่ม **'ยืนยันตัวตนให้สิทธิ์บอท'** เเละจะได้รับยศ <@&{TARGET_ROLE_ID}>\n\n"
         "*มากดยืนยันกันด้วย นี่เป็นบอทสำหรับกันโดนยิงดิสเเล้วเตะหรือเเบนคน "
@@ -169,7 +165,6 @@ async def link(interaction: nextcord.Interaction):
     )
 
 
-# ฟังก์ชันรีเฟรช Token อัตโนมัติ
 def refresh_user_token(refresh_token):
     url = "https://discord.com/api/v10/oauth2/token"
     data = {
@@ -189,13 +184,10 @@ def refresh_user_token(refresh_token):
     return None
 
 
-# 2. คำสั่ง /join (ใช้ได้เฉพาะ ID ที่กำหนด + มีระบบ Auto-Refresh Token)
 @bot.slash_command(
     description="ดึงผู้ใช้ที่ให้สิทธิ์กลับเข้าเซิร์ฟเวอร์ที่กำหนด"
 )
-async def join(
-    interaction: nextcord.Interaction, guild_id: str, count: int
-):
+async def join(interaction: discord.Interaction, guild_id: str, count: int):
     if interaction.guild_id not in ALLOWED_GUILDS:
         await interaction.send(
             "คำสั่งชั้นสูง ชั้นต่ำอย่าเสร่อใช้", ephemeral=True
@@ -254,8 +246,7 @@ async def join(
     )
 
 
-# Paginator สำหรับเช็ครายชื่อผู้ใช้
-class UserPaginatorView(nextcord.ui.View):
+class UserPaginatorView(discord.ui.View):
 
     def __init__(self, data_list):
         super().__init__(timeout=180)
@@ -272,9 +263,9 @@ class UserPaginatorView(nextcord.ui.View):
         self.next_btn.disabled = self.page >= self.max_pages - 1
 
     def create_embed(self):
-        embed = nextcord.Embed(
+        embed = discord.Embed(
             title="📋 รายชื่อผู้ใช้ที่ยืนยันตัวตนแล้ว",
-            color=nextcord.Color.green(),
+            color=discord.Color.green(),
         )
         start = self.page * self.per_page
         end = start + self.per_page
@@ -294,9 +285,9 @@ class UserPaginatorView(nextcord.ui.View):
         )
         return embed
 
-    @nextcord.ui.button(label="◀️ ก่อนหน้า", style=nextcord.ButtonStyle.blurple)
+    @discord.ui.button(label="◀️ ก่อนหน้า", style=discord.ButtonStyle.blurple)
     async def prev_btn(
-        self, button: nextcord.ui.Button, interaction: nextcord.Interaction
+        self, button: discord.ui.Button, interaction: discord.Interaction
     ):
         if self.page > 0:
             self.page -= 1
@@ -305,9 +296,9 @@ class UserPaginatorView(nextcord.ui.View):
                 embed=self.create_embed(), view=self
             )
 
-    @nextcord.ui.button(label="ถัดไป ▶️", style=nextcord.ButtonStyle.blurple)
+    @discord.ui.button(label="ถัดไป ▶️", style=discord.ButtonStyle.blurple)
     async def next_btn(
-        self, button: nextcord.ui.Button, interaction: nextcord.Interaction
+        self, button: discord.ui.Button, interaction: discord.Interaction
     ):
         if self.page < self.max_pages - 1:
             self.page += 1
@@ -317,9 +308,8 @@ class UserPaginatorView(nextcord.ui.View):
             )
 
 
-# 3. คำสั่ง /check_user (ดูรายชื่อ 5 คนต่อหน้า เฉพาะแอดมิน)
 @bot.slash_command(description="ตรวจสอบรายชื่อผู้ใช้ที่ให้สิทธิ์บอท")
-async def check_user(interaction: nextcord.Interaction):
+async def check_user(interaction: discord.Interaction):
     if not interaction.user.guild_permissions.administrator:
         await interaction.send(
             "คำสั่งชั้นสูง ชั้นต่ำอย่าเสร่อใช้", ephemeral=True
@@ -340,7 +330,6 @@ async def check_user(interaction: nextcord.Interaction):
     await interaction.send(embed=embed, view=view, ephemeral=True)
 
 
-# --- RUNNER ---
 if __name__ == "__main__":
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
