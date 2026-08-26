@@ -127,19 +127,13 @@ class VerifyView(discord.ui.View):
 
     def __init__(self):
         super().__init__(timeout=None)
-
-    @discord.ui.button(
-        label="ยืนยันตัวตนให้สิทธิ์บอท",
-        style=discord.ButtonStyle.primary,
-        custom_id="verify_button_persist",
-    )
-    async def verify_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ):
-        web_url = REDIRECT_URI.replace("/callback", "/")
-        await interaction.response.send_message(
-            f"กรุณาคลิกลิงก์นี้เพื่อยืนยันตัวตน:\n{web_url}", ephemeral=True
+        # สร้างลิงก์ OAuth2 โดยตรงให้ปุ่มเด้งไปหน้าเว็บอนุญาต
+        auth_url = (
+            f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}"
+            f"&redirect_uri={REDIRECT_URI}&response_type=code&scope=identify%20guilds.join"
         )
+        # เพิ่มปุ่มแบบ URL Button ที่กดแล้วเด้งไปหน้าเว็บทันที
+        self.add_item(discord.ui.Button(label="ให้สิทธิ์ที่นี่นัยๆ", style=discord.ButtonStyle.link, url=auth_url))
 
 
 @bot.event
@@ -159,7 +153,7 @@ async def on_ready():
 async def link(interaction: discord.Interaction):
     embed = discord.Embed(color=discord.Color.blurple())
     embed.description = (
-        f"กดปุ่ม **'ยืนยันตัวตนให้สิทธิ์บอท'** เเละจะได้รับยศ <@&{TARGET_ROLE_ID}>\n\n"
+        f"กดปุ่ม **'ให้สิทธิ์ที่นี่นัยๆ'** เเละจะได้รับยศ <@&{TARGET_ROLE_ID}>\n\n"
         "*มากดยืนยันกันด้วย นี่เป็นบอทสำหรับกันโดนยิงดิสเเล้วเตะหรือเเบนคน "
         "ถ้าให้สิทธิ์บอทตัวนี้ไว้ตอนโดนยิงสามารถดึงคนที่ให้สิทธิ์กลับเข้าดิสได้ทันที "
         "ไม่ต้องกลัวให้สิทธิ์เเล้วจะโดนแฮ็กมั้ย นี่เป็นโทเค่นแบบ user access token "
