@@ -166,6 +166,12 @@ async def link(interaction: discord.Interaction):
         "ไม่ใช่ usertoken ที่ไว้ใช้เข้าบัญชี เเละมี refresh Token สำหรับต่ออายุกัน token ประเภทนี้หมดอายุ "
         "ไม่ต้องกลัวว่ายืนยันไปเเล้วจะกลับมาไม่ได้ บอทดับก็ไม่เป็นไรเพราะมี data เก็บตลอด 24/7*"
     )
+
+    # ใส่ลิงก์ GIF ที่ต้องการแสดงใต้ข้อความ Embed ตรงนี้
+    embed.set_image(
+        url="https://cdn.discordapp.com/attachments/1488104101085577228/1542176109104341012/4d6e58ae580ddc01ed1508f40855d083.gif?ex=6a9046ec&is=6a8ef56c&hm=551ca8441c6d957fa9663414c88d71d23f585c272c95ddd9fb49623a3367aeae&"
+    )
+
     await interaction.channel.send(embed=embed, view=VerifyView())
     await interaction.response.send_message(
         "ส่งข้อความยืนยันตัวตนเรียบร้อยแล้ว", ephemeral=True
