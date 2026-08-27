@@ -6,9 +6,9 @@ import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select, Modal, TextInput
 
-# ตั้งค่าเบอร์รับเงินทรูมันนี่และแอดมิน (สามารถแก้ ID แอดมินตรงนี้ได้)
+# ตั้งค่าเบอร์รับเงินทรูมันนี่และแอดมิน
 TARGET_PHONE = "0837751528"
-ADMIN_IDS = [int(os.getenv("ADMIN_ID", "1489527387183120505"))] # ใส่ ID แอดมินของคุณที่นี่
+ADMIN_IDS = [int(os.getenv("ADMIN_ID", "1489527387183120505"))]
 LOG_CHANNEL_ID = 1489527387183120505
 DB_FILE = "database.json"
 
@@ -56,7 +56,6 @@ class BuyModal(Modal, title="Buy Token"):
         await interaction.response.defer(ephemeral=True)
         raw_val = self.amount_input.value.strip()
 
-        # ระบบป้องกันโกง: เช็คว่าเป็นตัวเลขหรือไม่ และอยู่ในช่วง 1-1000 หรือไม่
         if not raw_val.isdigit():
             err_embed = discord.Embed(
                 description="<a:1000029618:1542493395400925226> ไม่สามารถทำการได้ เนื่องจากกรอกข้อมูลไม่ถูกต้อง (ต้องเป็นตัวเลขเท่านั้น)",
@@ -82,12 +81,11 @@ class BuyModal(Modal, title="Buy Token"):
         db = load_db()
         if len(db["stock"]) < amount:
             err_embed = discord.Embed(
-                description=f"<a:1000029618:1542493395400925226> สินค้าในสต็อกไม่เพียงพอ! (เหลือ {len(db['stock']} ชิ้น)",
+                description=f"<a:1000029618:1542493395400925226> สินค้าในสต็อกไม่เพียงพอ! (เหลือ {len(db['stock'])} ชิ้น)",
                 color=discord.Color.red()
             )
             return await interaction.followup.send(embed=err_embed, ephemeral=True)
 
-        # คำนวณราคา (เรท 0.8)
         total_price = amount * db["rate"]
 
         user_id_str = str(interaction.user.id)
@@ -110,7 +108,6 @@ class BuyModal(Modal, title="Buy Token"):
             )
             return await msg.edit(embed=err_embed)
 
-        # ตัดเงินและตัดสต็อก
         db["users"][user_id_str]["money"] -= total_price
         db["users"][user_id_str]["total_bought"] += amount
         db["sold_count"] += amount
@@ -118,7 +115,6 @@ class BuyModal(Modal, title="Buy Token"):
         tokens_to_send = [db["stock"].pop(0) for _ in range(amount)]
         save_db(db)
 
-        # สร้างไฟล์ .txt ส่งทาง DM
         file_content = "\n".join(tokens_to_send)
         file_path = f"token_{interaction.user.id}.txt"
         with open(file_path, "w", encoding="utf-8") as f:
@@ -130,7 +126,6 @@ class BuyModal(Modal, title="Buy Token"):
         )
         await msg.edit(embed=success_embed)
 
-        # ส่งเข้า DM ลูกค้า
         try:
             dm_embed = discord.Embed(
                 description=f"<a:1000029602:1542200491981938698> คำสั่งซื้อสำเร็จ\nจำนวนสินค้า: {amount}\nจำนวนเงิน: {total_price} บาท",
@@ -143,7 +138,6 @@ class BuyModal(Modal, title="Buy Token"):
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        # แจ้งเตือนไปที่ห้อง Log
         log_channel = bot.get_channel(LOG_CHANNEL_ID)
         if log_channel:
             log_embed = discord.Embed(
@@ -172,12 +166,8 @@ class TopUpModal(Modal, title="Top Up (ซองของขวัญ TrueMoney)
         )
         msg = await interaction.followup.send(embed=load_embed, ephemeral=True)
 
-        # ฟังก์ชันจำลอง/เชื่อมต่อระบบซองวอเลท (ใช้ Timeout 10 วินาที ป้องกันค้าง)
         try:
-            # ตัวอย่างการเรียก API ซองของขวัญ (สมมติ endpoint ภายนอกหรือระบบเชื่อมต่อ)
-            # ในที่นี้ใช้ timeout 10 วินาทีตามที่ขอ
             async with aiohttp.ClientSession() as session:
-                # ปรับเปลี่ยน URL API ตามที่คุณใช้งานจริง (ตัวอย่างจำลองโครงสร้างการดึง)
                 payload = {"link": gift_link, "phone": TARGET_PHONE}
                 async with session.post("https://api.example.com/redeem", json=payload, timeout=10) as resp:
                     if resp.status != 200:
@@ -197,7 +187,6 @@ class TopUpModal(Modal, title="Top Up (ซองของขวัญ TrueMoney)
             )
             return await msg.edit(embed=err_embed)
 
-        # ถ้าสำเร็จ บันทึกยอดเงินลง DB
         db = load_db()
         user_id_str = str(interaction.user.id)
         if user_id_str not in db["users"]:
@@ -231,8 +220,6 @@ class CalcModal(Modal, title="Calculate Rates"):
         money = float(raw_val)
         db = load_db()
         rate = db["rate"]
-        
-        # คำนวณจำนวนสินค้าที่ได้จากเงิน
         can_buy = int(money / rate)
 
         calc_embed = discord.Embed(
@@ -357,5 +344,4 @@ async def on_ready():
     print(f"Logged in as {bot.user.name} (ID: {bot.user.id})")
     print("Bot is ready and running!")
 
-# รันบอทด้วย Token จาก Environment Variable บน Render
 bot.run(os.getenv("DISCORD_TOKEN"))
