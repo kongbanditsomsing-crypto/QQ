@@ -5,6 +5,23 @@ import aiohttp
 import discord
 from discord.ext import commands
 from discord.ui import Button, View, Select, Modal, TextInput
+from threading import Thread
+from flask import Flask
+
+# ----------------- เปิดเว็บเซิร์ฟเวอร์จำลองสำหรับรองรับพอร์ตของ Render (Web Service) -----------------
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run_web)
+    t.start()
 
 # ตั้งค่าเบอร์รับเงินทรูมันนี่และแอดมิน
 TARGET_PHONE = "0837751528"
@@ -344,4 +361,6 @@ async def on_ready():
     print(f"Logged in as {bot.user.name} (ID: {bot.user.id})")
     print("Bot is ready and running!")
 
-bot.run(os.getenv("DISCORD_TOKEN"))
+if __name__ == "__main__":
+    keep_alive()
+    bot.run(os.getenv("DISCORD_TOKEN"))
