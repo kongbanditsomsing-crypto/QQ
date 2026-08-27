@@ -1,385 +1,375 @@
 import os
 import json
 import asyncio
-import aiohttp
+import threading
+import traceback
+import requests
+from flask import Flask
 import discord
 from discord.ext import commands
-from discord.ui import Button, View, Select, Modal, TextInput
-from threading import Thread
-from flask import Flask
+from discord import app_commands
 
-# ----------------- เปิดเว็บเซิร์ฟเวอร์จำลองเพื่อรองรับ Web Service (ฟรีบน Render) -----------------
+# --- CONFIGURATION & WEB SERVER FOR RENDER ---
+TOKEN = os.getenv("DISCORD_TOKEN", "ใส่_Token_บอทของคุณตรงนี้")
+ADMIN_IDS = [1488103702488154173]  # เปลี่ยนเป็น Discord ID ของแอดมิน (ใส่ได้หลายคน)
+RECEIVE_PHONE = "0837751528"
+LOG_CHANNEL_ID = 1489527387183120505  # ห้องแจ้งเตือนเมื่อมีคนซื้อ
+RATE = 0.8  # เรทราคาต่อ 1 ชิ้น
+
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot is running 24/7!"
+    return "Bot is running and alive!"
 
-def run_web():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+def run_web_server():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
 
-def keep_alive():
-    t = Thread(target=run_web)
-    t.start()
-
-# ----------------- ตั้งค่าข้อมูลพื้นฐาน -----------------
-TARGET_PHONE = "0837751528"
-ADMIN_IDS = [int(os.getenv("ADMIN_ID", "1489527387183120505"))]
-LOG_CHANNEL_ID = 1489527387183120505
+# --- DATABASE MANAGEMENT (SAFE & AUTO-RECOVERY) ---
 DB_FILE = "database.json"
+db_lock = threading.Lock()
 
-# ----------------- ระบบ Database ป้องกันข้อมูลเสียหาย (Atomic Write) -----------------
 def load_db():
-    default_data = {
-        "stock": [],
-        "sold_count": 0,
-        "users": {},
-        "rate": 0.8
-    }
-    if not os.path.exists(DB_FILE):
-        save_db(default_data)
-        return default_data
-    try:
-        with open(DB_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return default_data
+    with db_lock:
+        if not os.path.exists(DB_FILE):
+            default_data = {
+                "stock": [],  # เก็บรายการ token เป็น list ของ string
+                "sold_count": 0,
+                "users": {}   # {user_id: {"balance": 0.0, "total_spent": 0.0, "total_topup": 0.0, "orders_count": 0}}
+            }
+            save_db(default_data)
+            return default_data
+        try:
+            with open(DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            # กรณีไฟล์พังหรือเสียหาย ป้องกันบอทดับด้วยการรีเซ็ตโครงสร้างพื้นฐาน
+            return {"stock": [], "sold_count": 0, "users": {}}
 
 def save_db(data):
-    temp_file = DB_FILE + ".tmp"
-    with open(temp_file, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-    os.replace(temp_file, DB_FILE)
+    with db_lock:
+        temp_file = DB_FILE + ".tmp"
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        os.replace(temp_file, DB_FILE)
 
-# ----------------- ตั้งค่าบอท Discord -----------------
+# --- BOT SETUP ---
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True
+client = commands.Bot(command_prefix="!", intents=intents)
 
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-# ----------------- Modal สำหรับซื้อ Token -----------------
-class BuyModal(Modal, title="Buy Token"):
-    amount_input = TextInput(
-        label="ระบุจำนวนสินค้าที่ต้องการ (1-1000)",
-        placeholder="กรอกตัวเลข เช่น 5",
-        min_length=1,
-        max_length=4,
-        required=True
-    )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        raw_val = self.amount_input.value.strip()
-
-        # ป้องกันกรอกไม่ใช่ตัวเลข หรือติดลบ
-        if not raw_val.isdigit():
-            err_embed = discord.Embed(
-                description="<a:1000029618:1542493395400925226> ไม่สามารถทำการได้ เนื่องจากกรอกข้อมูลไม่ถูกต้อง (ต้องเป็นตัวเลขเท่านั้น)",
-                color=discord.Color.red()
-            )
-            return await interaction.followup.send(embed=err_embed, ephemeral=True)
-
-        amount = int(raw_val)
-
-        # ถ้ามากกว่า 1000 หรือน้อยกว่า 1
-        if amount < 1 or amount > 1000:
-            load_embed = discord.Embed(
-                description="<a:1000029614:1542490868731224166> กำลังตรวจสอบข้อมูล...",
-                color=discord.Color.yellow()
-            )
-            msg = await interaction.followup.send(embed=load_embed, ephemeral=True)
-            await asyncio.sleep(2)
-            err_embed = discord.Embed(
-                description="<a:1000029618:1542493395400925226> ไม่สามารถทำการได้ (จำนวนต้องอยู่ระหว่าง 1 ถึง 1000)",
-                color=discord.Color.red()
-            )
-            return await msg.edit(embed=err_embed)
-
-        db = load_db()
-        if len(db["stock"]) < amount:
-            err_embed = discord.Embed(
-                description=f"<a:1000029618:1542493395400925226> สินค้าในสต็อกไม่เพียงพอ! (เหลือ {len(db['stock'])} ชิ้น)",
-                color=discord.Color.red()
-            )
-            return await interaction.followup.send(embed=err_embed, ephemeral=True)
-
-        total_price = amount * db["rate"]
-
-        user_id_str = str(interaction.user.id)
-        if user_id_str not in db["users"]:
-            db["users"][user_id_str] = {"money": 0.0, "total_bought": 0, "total_topup": 0}
-
-        user_money = db["users"][user_id_str]["money"]
-
-        load_embed = discord.Embed(
-            description="<a:1000029614:1542490868731224166> กำลังตรวจสอบยอดเงินและสต็อก...",
-            color=discord.Color.yellow()
-        )
-        msg = await interaction.followup.send(embed=load_embed, ephemeral=True)
-        await asyncio.sleep(2)
-
-        if user_money < total_price:
-            err_embed = discord.Embed(
-                description=f"<a:1000029618:1542493395400925226> เงินของคุณไม่เพียงพอ! ต้องการ {total_price} บาท แต่คุณมี {user_money} บาท",
-                color=discord.Color.red()
-            )
-            return await msg.edit(embed=err_embed)
-
-        # ตัดเงินและตัดสต็อก
-        db["users"][user_id_str]["money"] -= total_price
-        db["users"][user_id_str]["total_bought"] += amount
-        db["sold_count"] += amount
-
-        tokens_to_send = [db["stock"].pop(0) for _ in range(amount)]
-        save_db(db)
-
-        # สร้างไฟล์ txt แบบ 1 บรรทัดต่อ 1 โทเค็น
-        file_content = "\n".join(tokens_to_send)
-        file_path = f"token_{interaction.user.id}.txt"
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(file_content)
-
-        success_embed = discord.Embed(
-            description=f"<a:1000029620:1542494056070914109> สำเร็จ จำนวน {amount} ชิ้น | เงินที่ต้องชำระ {total_price} บาท",
-            color=discord.Color.green()
-        )
-        await msg.edit(embed=success_embed)
-
-        # ส่งสินค้าเข้า DM
-        try:
-            dm_embed = discord.Embed(
-                description=f"<a:1000029602:1542200491981938698> คำสั่งซื้อสำเร็จ\nจำนวนสินค้า: {amount}\nจำนวนเงิน: {total_price} บาท",
-                color=discord.Color.green()
-            )
-            await interaction.user.send(embed=dm_embed, file=discord.File(file_path))
-        except Exception:
-            pass
-        
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-        # ส่ง Log ไปยังห้องที่กำหนด
-        log_channel = bot.get_channel(LOG_CHANNEL_ID)
-        if log_channel:
-            log_embed = discord.Embed(
-                title="📦 มีการซื้อสินค้าสำเร็จ",
-                description=f"**ผู้ซื้อ:** {interaction.user} (`{interaction.user.id}`)\n**จำนวน:** {amount} ชิ้น\n**ยอดเงิน:** {total_price} บาท",
-                color=discord.Color.blue()
-            )
-            await log_channel.send(embed=log_embed)
-
-
-# ----------------- Modal สำหรับเติมเงิน (Top Up) พร้อมระบบดัก Error ละเอียด -----------------
-class TopUpModal(Modal, title="Top Up (ซองของขวัญ TrueMoney)"):
-    link_input = TextInput(
-        label="ใส่ลิ้งค์ซองทรูมันนี่",
-        placeholder="https://gift.truemoney.com/campaign/?v=...",
-        required=True
-    )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        gift_link = self.link_input.value.strip()
-
-        load_embed = discord.Embed(
-            description="<a:1000029614:1542490868731224166> กำลังทำรายการเติมเงิน กรุณารอสักครู่...",
-            color=discord.Color.yellow()
-        )
-        msg = await interaction.followup.send(embed=load_embed, ephemeral=True)
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                payload = {"link": gift_link, "phone": TARGET_PHONE}
-                # ตั้ง Timeout ไว้ที่ 10 วินาทีตามต้องการ
-                async with session.post("https://api.example.com/redeem", json=payload, timeout=10) as resp:
-                    if resp.status == 400:
-                        raise ValueError("ซองอาจถูกใช้ไปแล้วหรือหมดอายุ")
-                    elif resp.status == 403:
-                        raise ValueError("เบอร์รับเงินไม่ตรงตามเงื่อนไขหรือภูมิภาค")
-                    elif resp.status != 200:
-                        raise Exception("API Error")
-                    
-                    res_data = await resp.json()
-                    amount_topup = float(res_data.get("amount", 0))
-
-        except asyncio.TimeoutError:
-            err_embed = discord.Embed(
-                description="<a:1000029618:1542493395400925226> ไม่สามารถทำการได้: ซองผิดหรือระบบใช้เวลาตอบสนองนานเกินไป (Network Timeout)",
-                color=discord.Color.red()
-            )
-            return await msg.edit(embed=err_embed)
-        except ValueError as ve:
-            err_embed = discord.Embed(
-                description=f"<a:1000029618:1542493395400925226> ไม่สามารถทำการได้: {str(ve)} หากมีข้อสอบถามกด ticket ได้เลย",
-                color=discord.Color.red()
-            )
-            return await msg.edit(embed=err_embed)
-        except Exception:
-            err_embed = discord.Embed(
-                description="<a:1000029618:1542493395400925226> ไม่สามารถทำการได้: ซองอาจผิด ถูกใช้ไปแล้ว หมดอายุ หรือมีปัญหาทางระบบ หากมีข้อสอบถามกด ticket ได้เลย",
-                color=discord.Color.red()
-            )
-            return await msg.edit(embed=err_embed)
-
-        db = load_db()
-        user_id_str = str(interaction.user.id)
-        if user_id_str not in db["users"]:
-            db["users"][user_id_str] = {"money": 0.0, "total_bought": 0, "total_topup": 0}
-
-        db["users"][user_id_str]["money"] += amount_topup
-        db["users"][user_id_str]["total_topup"] += amount_topup
-        save_db(db)
-
-        success_embed = discord.Embed(
-            description=f"<a:1000029620:1542494056070914109> สำเร็จ เงินจำนวน {amount_topup} บาท ถูกเพิ่มเข้าสู่บัญชีของคุณแล้ว",
-            color=discord.Color.green()
-        )
-        await msg.edit(embed=success_embed)
-
-
-# ----------------- Modal สำหรับคำนวณเงิน (Calculate) -----------------
-class CalcModal(Modal, title="Calculate Rates"):
-    money_input = TextInput(
-        label="ระบุจำนวนเงินที่ต้องการคำนวณ",
-        placeholder="กรอกตัวเลข เช่น 50",
-        required=True
-    )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        raw_val = self.money_input.value.strip()
-        if not raw_val.replace('.', '', 1).isdigit():
-            err_embed = discord.Embed(description="กรุณากรอกตัวเลขที่ถูกต้องเท่านั้น", color=discord.Color.red())
-            return await interaction.response.send_message(embed=err_embed, ephemeral=True)
-
-        money = float(raw_val)
-        db = load_db()
-        rate = db["rate"]
-        can_buy = int(money / rate)
-
-        calc_embed = discord.Embed(
-            description=f"<a:1000029597:1542198336369598555> จำนวนเงิน {money} บาท\nจำนวนสินค้าที่สามารถซื้อได้ {can_buy} ชิ้น",
-            color=discord.Color.blue()
-        )
-        await interaction.response.send_message(embed=calc_embed, ephemeral=True)
-
-
-# ----------------- Select Menu ด้านล่าง Embed ขายสินค้า -----------------
-class ShopSelect(Select):
+# --- PERSISTENT VIEW (MENU) ---
+class ShopSelect(discord.ui.Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="Buy Token", value="buy", description="ซื้อโทเค็นอัตโนมัติ", emoji="<a:1000029591:1542196467740053754>"),
-            discord.SelectOption(label="Check Money", value="check", description="เช็คยอดเงินและโปรไฟล์ของคุณ", emoji="<a:1000029613:1542489732641198180>"),
-            discord.SelectOption(label="Top Up", value="topup", description="เติมเงินด้วยซองวอเลท", emoji="<a:1000029595:1542197141701791804>"),
-            discord.SelectOption(label="Calculate", value="calc", description="คำนวณเรทราคาสินค้า", emoji="<a:1000029614:1542490868731224166>")
+            discord.SelectOption(label="Buy Token", description="ซื้อ Token อัตโนมัติ", emoji="<a:1000029591:1542196467740053754>"),
+            discord.SelectOption(label="Check Money", description="ตรวจสอบยอดเงินและประวัติของคุณ", emoji="<a:1000029613:1542489732641198180>"),
+            discord.SelectOption(label="Top Up", description="เติมเงินด้วยซองของขวัญ TrueMoney", emoji="<a:1000029595:1542197141701791804>"),
+            discord.SelectOption(label="Calculate", description="คำนวณราคาตามจำนวนเงินหรือสินค้า", emoji="<a:1000029614:1542490868731224166>"),
         ]
-        super().__init__(placeholder="คลิกเมนู", min_values=1, max_values=1, options=options)
+        super().__init__(placeholder="คลิกเมนูเพื่อเลือกใช้งาน", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
         val = self.values[0]
-        if val == "buy":
+        if val == "Buy Token":
             await interaction.response.send_modal(BuyModal())
-        elif val == "check":
-            db = load_db()
-            user_id_str = str(interaction.user.id)
-            u_data = db["users"].get(user_id_str, {"money": 0.0, "total_bought": 0, "total_topup": 0})
-            
-            load_embed = discord.Embed(description="<a:1000029614:1542490868731224166> กำลังโหลดข้อมูลของคุณ...", color=discord.Color.yellow())
-            await interaction.response.send_message(embed=load_embed, ephemeral=True)
-            await asyncio.sleep(2)
-
-            profile_embed = discord.Embed(
-                title=f"โปรไฟล์ของคุณ: {interaction.user.name}",
-                description=f"💰 **เงินคงเหลือ:** {u_data['money']} บาท\n🛒 **จำนวนที่เคยซื้อ:** {u_data['total_bought']} ชิ้น\n💳 **ยอดเติมเงินสะสม:** {u_data['total_topup']} บาท",
-                color=discord.Color.blue()
-            )
-            await interaction.edit_original_response(embed=profile_embed)
-
-        elif val == "topup":
+        elif val == "Check Money":
+            await check_money_process(interaction)
+        elif val == "Top Up":
             await interaction.response.send_modal(TopUpModal())
-        elif val == "calc":
+        elif val == "Calculate":
             await interaction.response.send_modal(CalcModal())
 
-class ShopView(View):
+class ShopView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(ShopSelect())
 
+# --- MODALS & PROCESSES ---
 
-# ----------------- คำสั่ง /open -----------------
-@bot.command()
-async def open(ctx):
-    if ctx.author.id not in ADMIN_IDS:
-        return await ctx.send("ชนชั้นต่ำอย่าใช้คำสั่งชั้นสูง")
+# 1. Buy Modal
+class BuyModal(discord.ui.Modal, title="Buy Token"):
+    amount = discord.ui.TextInput(label="จำนวนสินค้าที่ต้องการ (1-1000)", placeholder="ใส่ตัวเลขเท่านั้น...", min_length=1, max_length=4)
 
+    async def on_submit(self, interaction: discord.Interaction):
+        raw_val = self.amount.value.strip()
+        
+        # ป้องกันโกง / ใส่ค่าที่ไม่ใช่ตัวเลข หรือใส่เครื่องหมายติดลบ
+        if not raw_val.isdigit():
+            await interaction.response.send_message("<a:1000029614:1542490868731224166>", ephemeral=True)
+            await asyncio.sleep(2)
+            embed = discord.Embed(title="Error", description="<a:1000029618:1542493395400925226> ไม่สามารถทำการได้ (กรุณากรอกเฉพาะตัวเลขจำนวนเต็มบวก)", color=discord.Color.red())
+            await interaction.edit_original_response(content=None, embed=embed)
+            return
+
+        qty = int(raw_val)
+
+        if qty < 1 or qty > 1000:
+            await interaction.response.send_message("<a:1000029614:1542490868731224166>", ephemeral=True)
+            await asyncio.sleep(2)
+            embed = discord.Embed(title="Error", description="<a:1000029618:1542493395400925226> ไม่สามารถทำการได้ (จำนวนต้องอยู่ระหว่าง 1 ถึง 1000)", color=discord.Color.red())
+            await interaction.edit_original_response(content=None, embed=embed)
+            return
+
+        total_cost = round(qty * RATE, 2)
+
+        # เช็คสต็อกและเงินในระบบ
+        db = load_db()
+        user_id_str = str(interaction.user.id)
+        if user_id_str not in db["users"]:
+            db["users"][user_id_str] = {"balance": 0.0, "total_spent": 0.0, "total_topup": 0.0, "orders_count": 0}
+
+        user_bal = db["users"][user_id_str]["balance"]
+        stock_len = len(db["stock"])
+
+        if stock_len < qty:
+            await interaction.response.send_message("<a:1000029614:1542490868731224166>", ephemeral=True)
+            await asyncio.sleep(2)
+            embed = discord.Embed(title="Error", description=f"<a:1000029618:1542493395400925226> ไม่สามารถทำการได้ (สินค้าในสต็อกไม่พอ มีเหลือเพียง {stock_len} ชิ้น)", color=discord.Color.red())
+            await interaction.edit_original_response(content=None, embed=embed)
+            return
+
+        if user_bal < total_cost:
+            await interaction.response.send_message("<a:1000029614:1542490868731224166>", ephemeral=True)
+            await asyncio.sleep(2)
+            embed = discord.Embed(title="Error", description=f"<a:1000029618:1542493395400925226> ไม่สามารถทำการได้ (ยอดเงินของคุณไม่พอ ต้องใช้ {total_cost} บาท มีอยู่ {user_bal} บาท)", color=discord.Color.red())
+            await interaction.edit_original_response(content=None, embed=embed)
+            return
+
+        # ตัดสต็อกและหักเงิน
+        await interaction.response.send_message("<a:1000029614:1542490868731224166>", ephemeral=True)
+        
+        purchased_tokens = db["stock"][:qty]
+        db["stock"] = db["stock"][qty:]
+        db["sold_count"] += qty
+        
+        db["users"][user_id_str]["balance"] = round(user_bal - total_cost, 2)
+        db["users"][user_id_str]["total_spent"] = round(db["users"][user_id_str]["total_spent"] + total_cost, 2)
+        db["users"][user_id_str]["orders_count"] += 1
+        save_db(db)
+
+        await asyncio.sleep(2)
+        success_embed = discord.Embed(title="Success", description=f"<a:1000029620:1542494056070914109> สำเร็จ\nจำนวนสินค้า: {qty} ชิ้น\nเงินที่ต้องชำระ: {total_cost} บาท", color=discord.Color.green())
+        await interaction.edit_original_response(content=None, embed=success_embed)
+
+        # ส่งไฟล์เข้า DM
+        file_content = "\n".join(purchased_tokens)
+        file_bytes = discord.File(fp=__import__('io').BytesIO(file_content.encode('utf-8')), filename=f"token({qty}).txt")
+        
+        try:
+            dm_channel = await interaction.user.create_dm()
+            dm_embed = discord.Embed(title="Order Complete", description=f"<a:1000029602:1542200491981938698> คำสั่งซื้อสำเร็จ\nจำนวนสินค้า: {qty}\nจำนวนเงิน: {total_cost} บาท", color=discord.Color.blue())
+            await dm_channel.send(embed=dm_embed, file=file_bytes)
+        except Exception:
+            pass
+
+        # ส่ง Log ไปห้องที่กำหนด
+        log_channel = client.get_channel(LOG_CHANNEL_ID)
+        if log_channel:
+            log_embed = discord.Embed(title="New Sale Notification", description=f"**ผู้ซื้อ:** {interaction.user} (`{interaction.user.id}`)\n**จำนวน:** {qty} ชิ้น\n**ยอดรวม:** {total_cost} บาท", color=discord.Color.gold())
+            await log_channel.send(embed=log_embed)
+
+        # อัปเดตร้านค้าหลักให้อัตโนมัติ
+        await update_main_shop_embed()
+
+# 2. Check Money Process
+async def check_money_process(interaction: discord.Interaction):
+    await interaction.response.send_message("<a:1000029614:1542490868731224166>", ephemeral=True)
+    await asyncio.sleep(2)
+    
+    db = load_db()
+    user_id_str = str(interaction.user.id)
+    u_data = db["users"].get(user_id_str, {"balance": 0.0, "total_spent": 0.0, "total_topup": 0.0, "orders_count": 0})
+
+    embed = discord.Embed(title="Profile & Balance", color=discord.Color.blue())
+    embed.add_field(name="ผู้ใช้งาน", value=interaction.user.mention, inline=False)
+    embed.add_field(name="เงินคงเหลือ", value=f"{u_data['balance']} บาท", inline=True)
+    embed.add_field(name="จำนวนครั้งที่สั่งซื้อ", value=f"{u_data['orders_count']} ครั้ง", inline=True)
+    embed.add_field(name="ยอดเงินที่เคยเติมทั้งหมด", value=f"{u_data['total_topup']} บาท", inline=True)
+    
+    await interaction.edit_original_response(content=None, embed=embed)
+
+# 3. Top Up Modal (TrueMoney API with Timeout & Exception Handling)
+class TopUpModal(discord.ui.Modal, title="Top Up TrueMoney"):
+    link = discord.ui.TextInput(label="ลิ้งก์ซองของขวัญ TrueMoney", placeholder="https://gift.truemoney.com/campaign/?v=...", min_length=10, max_length=150)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        voucher_link = self.link.value.strip()
+        await interaction.response.send_message("<a:1000029614:1542490868731224166>", ephemeral=True)
+
+        # ดึง voucher_hash จากลิงก์
+        voucher_hash = ""
+        if "?v=" in voucher_link:
+            voucher_hash = voucher_link.split("?v=")[1].split("&")[0]
+        else:
+            voucher_hash = voucher_link.split("/")[-1]
+
+        topup_success = False
+        amount_added = 0.0
+        error_reason = "ซองผิดหรือเป็นที่ระบบ"
+
+        try:
+            # ใช้ Timeout 10 วินาที ป้องกันเน็ตเวิร์กค้าง
+            payload = {
+                "mobile": RECEIVE_PHONE,
+                "voucher_hash": voucher_hash
+            }
+            # ตัวอย่างเรียก API ซองของขวัญ (ปรับเปลี่ยนตาม API ที่ใช้จริง หรือระบบหลังบ้าน)
+            response = requests.post("https://gift.truemoney.com/campaign/vouchers/" + voucher_hash + "/redeem", json={"mobile": RECEIVE_PHONE}, timeout=10)
+            data = response.json()
+
+            if data.get("status", {}).get("code") == "SUCCESS":
+                topup_success = True
+                amount_added = float(data["status"]["data"]["amount"])
+            else:
+                code = data.get("status", {}).get("code")
+                if code == "VOUCHER_NOT_FOUND":
+                    error_reason = "ไม่พบซองของขวัญนี้ในระบบ"
+                elif code == "VOUCHER_EXPIRED":
+                    error_reason = "ซองของขวัญหมดอายุแล้ว"
+                elif code == "CANNOT_GET_OWN_VOUCHER":
+                    error_reason = "ไม่สามารถเติมซองของตัวเองได้"
+                elif code == "VOUCHER_OUT_OF_STOCK":
+                    error_reason = "ซองนี้ถูกใช้งานไปแล้วเต็มจำนวน"
+                else:
+                    error_reason = f"ซองผิดหรือเกิดข้อผิดพลาด (Code: {code})"
+        except requests.exceptions.Timeout:
+            error_reason = "ระบบเชื่อมต่อใช้เวลานานเกินไป (Timeout) กรุณาลองใหม่อีกครั้ง"
+        except Exception:
+            error_reason = "ซองผิดหรือเป็นที่ระบบ ขัดข้องชั่วคราว"
+
+        await asyncio.sleep(2)
+
+        if topup_success:
+            db = load_db()
+            user_id_str = str(interaction.user.id)
+            if user_id_str not in db["users"]:
+                db["users"][user_id_str] = {"balance": 0.0, "total_spent": 0.0, "total_topup": 0.0, "orders_count": 0}
+            
+            db["users"][user_id_str]["balance"] = round(db["users"][user_id_str]["balance"] + amount_added, 2)
+            db["users"][user_id_str]["total_topup"] = round(db["users"][user_id_str]["total_topup"] + amount_added, 2)
+            save_db(db)
+
+            embed = discord.Embed(title="Success", description=f"<a:1000029620:1542494056070914109> สำเร็จ\nเติมเงินสำเร็จจำนวน: {amount_added} บาท", color=discord.Color.green())
+            await interaction.edit_original_response(content=None, embed=embed)
+        else:
+            embed = discord.Embed(title="Error", description=f"<a:1000029618:1542493395400925226> ไม่สามารถทำการได้\n{error_reason} หากมีข้อสอบถามกด ticket ได้เลย", color=discord.Color.red())
+            await interaction.edit_original_response(content=None, embed=embed)
+
+# 4. Calculate Modal
+class CalcModal(discord.ui.Modal, title="Calculate Token"):
+    money = discord.ui.TextInput(label="จำนวนเงินที่ต้องการคำนวณ", placeholder="ใส่ตัวเลขเงิน...", min_length=1, max_length=10)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        raw_val = self.money.value.strip()
+        if not raw_val.replace('.', '', 1).isdigit():
+            await interaction.response.send_message("กรุณากรอกตัวเลขที่ถูกต้องเท่านั้น", ephemeral=True)
+            return
+
+        amt = float(raw_val)
+        can_buy = int(amt // RATE)
+
+        embed = discord.Embed(title="Calculate Result", description=f"<a:1000029597:1542198336369598555> จำนวนเงิน: {amt} บาท\nจำนวนสินค้าที่สามารถซื้อได้: {can_buy} ชิ้น", color=discord.Color.blue())
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+# --- ADMIN COMMANDS ---
+@client.tree.command(name="open", description="เปิดหน้าร้านขาย Token หลัก")
+async def open_shop(interaction: discord.Interaction):
+    if interaction.user.id not in ADMIN_IDS:
+        await interaction.response.send_message("ชนชั้นต่ำอย่าใช้คำสั่งชั้นสูง", ephemeral=True)
+        return
+
+    await interaction.response.send_message("กำลังสร้างหน้าร้าน...", ephemeral=True)
+    await interaction.delete_original_response()
+    
     db = load_db()
     stock_count = len(db["stock"])
     sold_count = db["sold_count"]
-    rate = db["rate"]
 
-    embed = discord.Embed(
-        title="Sell Token",
-        description=(
-            "• โปรเปิดDmให้บอทสามารถส่งสินค้าให้ได้ <a:1000029591:1542196467740053754>\n"
-            "• หากบอทเสียหรือระบบบัคโปรดเปิดticket 24/7 <a:1000029601:1542200094177362030>\n"
-            "• ทางเราไม่มีนโยบายคืนเงินหลังซื้อสินค้า <a:1000029589:1542192271468929084>\n"
-            "• ตอนนี้ทางร้านยังรับเเค่ซองทรูมันนี่ <a:1000029599:1542199194754883604>\n\n"
-            f"<a:1000029595:1542197141701791804>  __Sold__ ``({sold_count})``  "
-            f"<a:1000029613:1542489732641198180> __Rates__ ``({rate}ต่อ1)`` "
-            f"<a:1000029614:1542490868731224166> __Stock__ ``({stock_count})``\n\n"
-            "• token ทางร้านเป็นแบบภาษาไทย \n"
-            "• token มีโปรไฟล์มีประวัติ คือมีครบอะ\n"
-            "• เป็นโทเค่นใหม่ตลอดวันอาจจะไม่นานมาก\n\n"
-            "•ทางร้านมีบัญชีม้า หากคนกดรับตังชื่อต่างกันไม่ต้องสงสัย"
-        ),
-        color=discord.Color.blue()
-    )
-    embed.set_image(url="https://cdn.discordapp.com/attachments/1502986327367487539/1542491126089523271/e6ebeffd2a63d00a7a1f6c94fdc90977.gif?ex=6a916c4e&is=6a901ace&hm=66311a78271497772d785a59ca0447cc39373caf66cb5c330ab829ad23eb5b9c&")
+    embed = discord.Embed(title="Sell Token", color=discord.Color.blue())
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1502986327367487539/1542491126089523271/e6ebeffd2a63d00a7a1f6c94fdc90977.gif")
+    
+    embed.add_field(name="", value="• โปรเปิดDmให้บอทสามารถส่งสินค้าให้ได้ <a:1000029591:1542196467740053754>\n• หากบอทเสียหรือระบบบัคโปรดเปิดticket 24/7 <a:1000029601:1542200094177362030>\n• ทางเราไม่มีนโยบายคืนเงินหลังซื้อสินค้า <a:1000029589:1542192271468929084>\n• ตอนนี้ทางร้านยังรับเเค่ซองทรูมันนี่ <a:1000029599:1542199194754883604>", inline=False)
+    
+    status_text = f"<a:1000029595:1542197141701791804>  __Sold__ ``({sold_count}) ``  <a:1000029613:1542489732641198180> __Rates__ ``({RATE}ต่อ1)`` <a:1000029614:1542490868731224166> __Stock__ ``({stock_count})``"
+    embed.add_field(name="", value=status_text, inline=False)
+    
+    info_text = "• token ทางร้านเป็นแบบภาษาไทย\n• token มีโปรไฟล์มีประวัติ คือมีครบอะ\n• เป็นโทเค่นใหม่ตลอดวันอาจจะไม่นานมาก\n\n• ทางร้านมีบัญชีม้า หากคนกดรับตังชื่อต่างกันไม่ต้องสงสัย"
+    embed.add_field(name="", value=info_text, inline=False)
 
-    await ctx.message.delete()
-    await ctx.send(embed=embed, view=ShopView())
+    await interaction.channel.send(embed=embed, view=ShopView())
+
+# ฟังก์ชันอัปเดต Embed หน้าร้านอัตโนมัติ (สามารถเขียนต่อยอดเชื่อม channel เก็บ message_id ได้)
+async def update_main_shop_embed():
+    pass
 
 
-# ----------------- คำสั่งเพิ่มสินค้า !add [token] -----------------
-@bot.command()
-async def add(ctx, *, token_text: str = None):
-    if ctx.author.id not in ADMIN_IDS:
-        return await ctx.send("ชนชั้นต่ำอย่าใช้คำสั่งชั้นสูง")
-    if not token_text:
-        return await ctx.send("กรุณาใส่ข้อมูล Token ตามหลังคำสั่ง เช่น !add (token)")
+# /add สำหรับเพิ่ม Token ทีละ 1 ชิ้น (แอดมินเท่านั้น)
+@client.tree.command(name="add", description="เพิ่ม Token ทีละ 1 ชิ้นเข้าสต็อก")
+async def add_stock(interaction: discord.Interaction, token: str):
+    if interaction.user.id not in ADMIN_IDS:
+        await interaction.response.send_message("ชนชั้นต่ำอย่าใช้คำสั่งชั้นสูง", ephemeral=True)
+        return
 
     db = load_db()
-    db["stock"].append(token_text.strip())
+    db["stock"].append(token)
     save_db(db)
 
-    await ctx.send(f"<a:1000029620:1542494056070914109> เพิ่มสินค้าเข้าสต็อกสำเร็จ! (ตอนนี้มี {len(db['stock'])} ชิ้น)")
+    await interaction.response.send_message(f"✅ เพิ่ม Token เข้าสต็อกสำเร็จ! (สต็อกคงเหลือ: {len(db['stock'])} ชิ้น)", ephemeral=True)
 
 
-# ----------------- คำสั่งเพิ่มเงินให้ยูสเซอร์ !add1022 [id] [จำนวนเงิน] -----------------
-@bot.command(name="add1022")
-async def add1022(ctx, target_user: discord.User = None, amount: float = None):
-    if ctx.author.id not in ADMIN_IDS:
-        return await ctx.send("ชนชั้นต่ำอย่าใช้คำสั่งชั้นสูง")
-    if not target_user or amount is None:
-        return await ctx.send("รูปแบบคำสั่งไม่ถูกต้อง: `!add1022 @user จำนวนเงิน`")
+# ข้อความคำสั่ง Prefix: !add1022 (idคน) (จำนวนเงิน)
+@client.event
+async def on_message(message):
+    if message.author.bot:
+        return
 
-    db = load_db()
-    user_id_str = str(target_user.id)
-    if user_id_str not in db["users"]:
-        db["users"][user_id_str] = {"money": 0.0, "total_bought": 0, "total_topup": 0}
+    if message.content.startswith("!add1022"):
+        if message.author.id not in ADMIN_IDS:
+            await message.channel.send("ชนชั้นต่ำอย่าใช้คำสั่งชั้นสูง")
+            return
 
-    db["users"][user_id_str]["money"] += amount
-    save_db(db)
+        parts = message.content.split()
+        if len(parts) != 3:
+            await message.channel.send("รูปแบบคำสั่งไม่ถูกต้อง! ตัวอย่าง: `!add1022 <idคน> <จำนวนเงิน>`")
+            return
 
-    await ctx.send(f"<a:1000029620:1542494056070914109> เพิ่มเงินให้ {target_user.mention} จำนวน {amount} บาท สำเร็จ!")
+        try:
+            target_id = str(parts[1])
+            amount = float(parts[2])
+            
+            db = load_db()
+            if target_id not in db["users"]:
+                db["users"][target_id] = {"balance": 0.0, "total_spent": 0.0, "total_topup": 0.0, "orders_count": 0}
+            
+            db["users"][target_id]["balance"] = round(db["users"][target_id]["balance"] + amount, 2)
+            save_db(db)
+
+            await message.channel.send(f"✅ เพิ่มเงินจำนวน {amount} บาท ให้กับยูสเซอร์ `{target_id}` เรียบร้อยแล้ว!")
+        except Exception:
+            await message.channel.send("เกิดข้อผิดพลาดในการประมวลผลคำสั่ง กรุณาตรวจสอบ ID หรือตัวเลขอีกครั้ง")
+
+    await client.process_commands(message)
 
 
-@bot.event
+# --- READY EVENT ---
+@client.event
 async def on_ready():
-    print(f"Logged in as {bot.user.name} (ID: {bot.user.id})")
-    print("Bot is ready and running!")
+    print(f"Logged in as {client.user} (ID: {client.user.id})")
+    try:
+        synced = await client.tree.sync()
+        print(f"Synced {len(synced)} command(s).")
+    except Exception as e:
+        print(e)
 
+
+# --- MAIN ENTRY POINT ---
 if __name__ == "__main__":
-    keep_alive()
-    bot.run(os.getenv("DISCORD_TOKEN"))
+    # เริ่มต้น Flask Web Server ใน Thread แยก เพื่อให้ Render มองเห็นพอร์ตและไม่ดับ
+    server_thread = threading.Thread(target=run_web_server)
+    server_thread.daemon = True
+    server_thread.start()
+
+    # รันบอท Discord
+    client.run(TOKEN)
