@@ -10,7 +10,7 @@ from discord.ext import commands
 # --- CONFIGURATION & WEB SERVER FOR RENDER ---
 TOKEN = os.getenv("DISCORD_TOKEN", "ใส่_Token_บอทของคุณตรงนี้")
 ADMIN_IDS = [1489527387183120505]  # เปลี่ยนเป็น Discord ID ของแอดมิน
-RECEIVE_PHONE = "0837751528"
+RECEIVE_PHONE = "1488103702488154173"
 LOG_CHANNEL_ID = 1489527387183120505
 RATE = 0.8
 
