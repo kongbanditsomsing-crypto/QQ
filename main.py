@@ -228,8 +228,8 @@ async def open_shop(interaction: discord.Interaction):
         await interaction.response.send_message("ชนชั้นต่ำอย่าใช้คำสั่งชั้นสูง", ephemeral=True)
         return
 
-    await interaction.response.send_message("กำลังสร้างหน้าร้าน...", ephemeral=True)
-    await interaction.delete_original_response()
+    # ตอบสนองแบบซ่อนข้อความชั่วคราวทันทีเพื่อกันหลุด timeout แล้วส่งหน้าร้านออกห้องแชท
+    await interaction.response.send_message("✅ สร้างหน้าร้านสำเร็จ!", ephemeral=True)
     
     db = load_db()
     embed = discord.Embed(title="Sell Token", color=discord.Color.blue())
