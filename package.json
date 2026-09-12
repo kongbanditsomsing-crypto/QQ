@@ -1,7 +1,7 @@
 {
   "name": "discord-full-web-clone",
   "version": "1.0.0",
-  "description": "Discord Complete Web UI with Categories, Voice & Soundboard",
+  "description": "Discord Clone Complete Web Interface",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
