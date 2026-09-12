@@ -2,10 +2,9 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const { Client } = require('discord.js-selfbot-v13');
+const { Client, GatewayIntentBits } = require('discord.js');
 const path = require('path');
 
-// ให้เซิร์ฟเวอร์อ่านไฟล์ UI จากโฟลเดอร์ public
 app.use(express.static(path.join(__dirname, 'public')));
 
 let botClient = null;
@@ -13,15 +12,27 @@ let botClient = null;
 io.on('connection', (socket) => {
     socket.on('login', (token) => {
         if(botClient) { botClient.destroy(); }
-        botClient = new Client({ checkUpdate: false });
         
-        botClient.on('ready', () => {
+        botClient = new Client({
+            intents: [
+                GatewayIntentBits.Guilds,
+                GatewayIntentBits.GuildMessages,
+                GatewayIntentBits.MessageContent,
+                GatewayIntentBits.GuildMembers
+            ]
+        });
+        
+        botClient.once('ready', () => {
             socket.emit('login_success', {
                 username: botClient.user.username,
-                tag: botClient.user.discriminator,
+                tag: botClient.user.discriminator || '0',
                 avatar: botClient.user.displayAvatarURL({ dynamic: true })
             });
-            const guilds = botClient.guilds.cache.map(g => ({ id: g.id, name: g.name, icon: g.iconURL({ dynamic: true }) }));
+            const guilds = botClient.guilds.cache.map(g => ({ 
+                id: g.id, 
+                name: g.name, 
+                icon: g.iconURL({ dynamic: true }) 
+            }));
             socket.emit('guilds', guilds);
         });
 
@@ -36,7 +47,7 @@ io.on('connection', (socket) => {
         });
 
         botClient.login(token).catch(err => {
-            socket.emit('login_error', "Token ไม่ถูกต้อง หรือบอทเข้าไม่ได้");
+            socket.emit('login_error', "Bot Token ไม่ถูกต้อง หรือยังไม่ได้เปิด Intents ใน Developer Portal");
         });
     });
 
@@ -44,8 +55,27 @@ io.on('connection', (socket) => {
         if (!botClient) return;
         const guild = botClient.guilds.cache.get(guildId);
         if(!guild) return;
-        const channels = guild.channels.cache.filter(c => c.type === 'GUILD_TEXT').map(c => ({id: c.id, name: c.name}));
-        socket.emit('channels', { guildName: guild.name, channels: channels });
+        
+        // 0 คือ GuildText ใน discord.js v14
+        const channels = guild.channels.cache
+            .filter(c => c.type === 0)
+            .map(c => ({ id: c.id, name: c.name }));
+
+        try {
+            await guild.members.fetch();
+        } catch(e) {}
+
+        const members = guild.members.cache.map(m => ({
+            username: m.user.username,
+            avatar: m.user.displayAvatarURL({ dynamic: true }),
+            status: 'online'
+        }));
+
+        socket.emit('channels', { 
+            guildName: guild.name, 
+            channels: channels, 
+            members: members 
+        });
     });
 
     socket.on('get_messages', async (channelId) => {
@@ -74,7 +104,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// ใช้ Port ของ Render ถ้าไม่มีให้ใช้ 3000
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
     console.log(`[+] Server Web UI Is Running on Port ${PORT}`);
