@@ -9,6 +9,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 let botClient = null;
 
+function parseMentions(msg) {
+    let content = msg.content;
+    msg.mentions.users.forEach(user => {
+        content = content.replace(new RegExp(`<@!?${user.id}>`, 'g'), `@${user.username}`);
+    });
+    return content;
+}
+
 io.on('connection', (socket) => {
     socket.on('login', (token) => {
         if (botClient) {
@@ -43,9 +51,10 @@ io.on('connection', (socket) => {
         botClient.on('messageCreate', (msg) => {
             socket.emit('new_message', {
                 author: msg.author.username,
-                content: msg.content,
-                channelId: msg.channelId,
                 avatar: msg.author.displayAvatarURL({ dynamic: true }),
+                bot: msg.author.bot,
+                content: parseMentions(msg),
+                channelId: msg.channelId,
                 timestamp: msg.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
         });
@@ -90,7 +99,9 @@ io.on('connection', (socket) => {
 
         const members = guild.members.cache.map(m => ({
             username: m.user.username,
-            avatar: m.user.displayAvatarURL({ dynamic: true })
+            tag: m.user.discriminator || '0',
+            avatar: m.user.displayAvatarURL({ dynamic: true }),
+            bot: m.user.bot
         }));
 
         socket.emit('guild_data', { guildName: guild.name, categories, members });
@@ -104,9 +115,10 @@ io.on('connection', (socket) => {
             const msgs = await channel.messages.fetch({ limit: 50 });
             const formatted = msgs.map(m => ({
                 author: m.author.username,
-                content: m.content,
-                channelId: m.channelId,
                 avatar: m.author.displayAvatarURL({ dynamic: true }),
+                bot: m.author.bot,
+                content: parseMentions(m),
+                channelId: m.channelId,
                 timestamp: m.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             })).reverse();
             socket.emit('messages', formatted);
