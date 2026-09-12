@@ -7,7 +7,6 @@ async function getGuildStructure(guild) {
 
         const categoriesMap = new Map();
 
-        // 1. ดึง Categories ทั้งหมด
         const categories = guild.channels.cache
             .filter(c => c.type === ChannelType.GuildCategory)
             .sort((a, b) => a.position - b.position);
@@ -20,14 +19,12 @@ async function getGuildStructure(guild) {
             });
         });
 
-        // หมวดหมู่สำหรับห้องที่ไม่มีหมวดหมู่
         categoriesMap.set('uncategorized', {
             id: 'uncategorized',
             name: 'TEXT CHANNELS',
             channels: []
         });
 
-        // 2. จัดสรรห้อง Text และ Voice ลงตามหมวดหมู่
         const channels = guild.channels.cache
             .filter(c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildVoice)
             .sort((a, b) => a.position - b.position);
@@ -50,22 +47,20 @@ async function getGuildStructure(guild) {
             categoriesMap.get(parentId).channels.push(channelData);
         });
 
-        // แปลงเป็น Array ลบหมวดหมู่เปล่า
-        const result = Array.from(categoriesMap.values()).filter(cat => cat.channels.length > 0);
+        const resultCategories = Array.from(categoriesMap.values()).filter(cat => cat.channels.length > 0);
 
         const membersList = guild.members.cache.map(m => ({
             username: m.user.username,
-            avatar: m.user.displayAvatarURL({ dynamic: true }),
-            status: m.presence?.status || 'offline'
+            avatar: m.user.displayAvatarURL({ dynamic: true })
         }));
 
         return {
             guildName: guild.name,
-            categories: result,
+            categories: resultCategories,
             members: membersList
         };
     } catch (err) {
-        console.error("Error getting guild structure:", err);
+        console.error("Error structuring channels:", err);
         return null;
     }
 }
