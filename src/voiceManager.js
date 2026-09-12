@@ -1,9 +1,8 @@
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
+const { joinVoiceChannel, createAudioPlayer, createAudioResource } = require('@discordjs/voice');
 
 let voiceConnection = null;
 const audioPlayer = createAudioPlayer();
 
-// รายชื่อเสียง Soundboard ตัวอย่าง (สามารถเปลี่ยนเป็น URL MP3 ได้)
 const SOUNDBOARD_LIST = [
     { id: 'bruh', name: '🔊 Bruh', url: 'https://www.myinstants.com/media/sounds/movie_1.mp3' },
     { id: 'airhorn', name: '📯 Airhorn', url: 'https://www.myinstants.com/media/sounds/mlg-air-horn.mp3' },
@@ -41,14 +40,14 @@ function playSound(soundId) {
     if (!voiceConnection) return { success: false, msg: "บอทไม่ได้อยู่ในห้อง VC!" };
 
     const sound = SOUNDBOARD_LIST.find(s => s.id === soundId);
-    if (!sound) return { success: false, msg: "ไม่พบเสียงนี้" };
+    if (!sound) return { success: false, msg: "ไม่พบเสียง" };
 
     try {
         const resource = createAudioResource(sound.url);
         audioPlayer.play(resource);
         return { success: true, soundName: sound.name };
     } catch (e) {
-        return { success: false, msg: "ไม่สามารถเล่นเสียงได้" };
+        return { success: false, msg: "เล่นเสียงไม่สำเร็จ" };
     }
 }
 
