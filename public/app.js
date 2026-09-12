@@ -35,7 +35,6 @@ socket.on('guilds', (guilds) => {
     });
 });
 
-// Render Categories และ Voice Channels
 socket.on('guild_data', (data) => {
     document.getElementById('serverName').innerText = data.guildName;
     const cl = document.getElementById('categoryList');
@@ -68,7 +67,6 @@ socket.on('guild_data', (data) => {
             }
             cl.appendChild(chDiv);
 
-            // รายชื่อคนสิงใน VC
             if (ch.type === 'voice' && ch.members.length > 0) {
                 ch.members.forEach(m => {
                     const mDiv = document.createElement('div');
@@ -80,7 +78,6 @@ socket.on('guild_data', (data) => {
         });
     });
 
-    // แสดงสมาชิกขวามือ
     const ml = document.getElementById('membersList');
     document.getElementById('memberCount').innerText = `MEMBERS — ${data.members.length}`;
     ml.innerHTML = '';
@@ -92,7 +89,6 @@ socket.on('guild_data', (data) => {
     });
 });
 
-// สถานะการเข้า Voice Channel
 socket.on('vc_status', (data) => {
     const vp = document.getElementById('voicePanel');
     if (data.connected) {
@@ -107,7 +103,6 @@ function leaveVC() {
     socket.emit('leave_vc');
 }
 
-// Soundboard Render
 socket.on('soundboard_list', (sounds) => {
     const grid = document.getElementById('soundboardGrid');
     grid.innerHTML = '';
