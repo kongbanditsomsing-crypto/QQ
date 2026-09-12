@@ -13,7 +13,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 let botClient = null;
 
 io.on('connection', (socket) => {
-    // ส่งรายการ Soundboard ให้หน้าเว็บ
     socket.emit('soundboard_list', SOUNDBOARD_LIST);
 
     socket.on('login', (token) => {
@@ -84,7 +83,6 @@ io.on('connection', (socket) => {
         } catch (e) {}
     });
 
-    // เข้าห้องเสียง VC
     socket.on('join_vc', (channelId) => {
         if (!botClient) return;
         const channel = botClient.channels.cache.get(channelId);
@@ -94,13 +92,11 @@ io.on('connection', (socket) => {
         }
     });
 
-    // ออกจาก VC
     socket.on('leave_vc', () => {
         leaveVoice();
         socket.emit('vc_status', { connected: false });
     });
 
-    // กดปุ่ม Soundboard
     socket.on('play_soundboard', (soundId) => {
         const res = playSound(soundId);
         socket.emit('soundboard_res', res);
@@ -109,5 +105,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-    console.log(`[+] Full Discord Web UI Running on Port ${PORT}`);
+    console.log(`[+] Discord Web Running on Port ${PORT}`);
 });
