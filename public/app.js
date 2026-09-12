@@ -137,7 +137,7 @@ function showMessageActionMenu(msg) {
             <div class="p-3 hover:bg-[#35373c] rounded-md cursor-pointer flex items-center gap-3 font-medium text-sm" onclick="navigator.clipboard.writeText('${msg.content.replace(/'/g, "\\'")}'); alert('คัดลอกข้อความแล้ว'); document.getElementById('actionMenu').remove();">
                 <svg class="w-5 h-5 text-[#949ba4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg> คัดลอกข้อความ
             </div>
-            <div class="p-3 hover:bg-[#35373c] rounded-md cursor-pointer flex items-center gap-3 font-medium text-sm" onclick="alert('ปักหมุดข้อความ'); document.getElementById('actionMenu').remove();">
+            <div class="p-3 hover:bg-[#35373c] rounded-md cursor-pointer flex items-center gap-3 font-medium text-sm" onclick="alert('ตรึงข้อความ'); document.getElementById('actionMenu').remove();">
                 <svg class="w-5 h-5 text-[#949ba4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg> ตรึงข้อความ
             </div>
             <div class="p-3 hover:bg-[#35373c] rounded-md cursor-pointer flex items-center gap-3 font-medium text-sm text-[#ed4245]" onclick="document.getElementById('actionMenu').remove();">
@@ -174,7 +174,6 @@ function addMessage(m) {
     const botBadge = m.bot ? `<span class="bg-[#5865F2] text-white text-[10px] px-1 py-0.1 rounded font-semibold ml-1">BOT</span>` : '';
     let formattedContent = m.content.replace(/(@\w+)/g, '<span class="bg-[#5865F2]/20 text-[#c9cdfb] px-1 rounded font-medium">$1</span>');
 
-    // Render embeds and attachments
     let embedsHtml = '';
     if (m.embeds && m.embeds.length > 0) {
         m.embeds.forEach(emb => {
