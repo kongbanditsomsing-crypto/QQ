@@ -1,7 +1,7 @@
 {
-  "name": "discord-web-clone",
+  "name": "discord-bot-web-ui",
   "version": "1.0.0",
-  "description": "Discord Web UI Clone using discord.js-selfbot-v13",
+  "description": "Discord Web UI using standard discord.js",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,6 +9,6 @@
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
-    "discord.js-selfbot-v13": "github:aiko-chan-ai/discord.js-selfbot-v13"
+    "discord.js": "^14.14.1"
   }
 }
