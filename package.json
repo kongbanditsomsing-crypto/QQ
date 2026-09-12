@@ -1,7 +1,7 @@
 {
-  "name": "discord-bot-web-ui",
+  "name": "discord-full-web-clone",
   "version": "1.0.0",
-  "description": "Discord Web UI using standard discord.js",
+  "description": "Discord Complete Web UI with Categories, Voice & Soundboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,6 +9,9 @@
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
-    "discord.js": "^14.14.1"
+    "discord.js": "^14.14.1",
+    "@discordjs/voice": "^0.16.1",
+    "tweetnacl": "^1.0.3",
+    "ffmpeg-static": "^5.2.0"
   }
 }
