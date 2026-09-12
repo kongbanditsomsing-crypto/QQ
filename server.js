@@ -17,6 +17,20 @@ function parseMentions(msg) {
     return content;
 }
 
+function formatMessage(m) {
+    return {
+        id: m.id,
+        author: m.author.username,
+        avatar: m.author.displayAvatarURL({ dynamic: true }),
+        bot: m.author.bot,
+        content: parseMentions(m),
+        channelId: m.channelId,
+        timestamp: m.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        embeds: m.embeds.map(e => e.toJSON()),
+        attachments: m.attachments.map(a => a.url)
+    };
+}
+
 io.on('connection', (socket) => {
     socket.on('login', (token) => {
         if (botClient) {
@@ -49,14 +63,7 @@ io.on('connection', (socket) => {
         });
 
         botClient.on('messageCreate', (msg) => {
-            socket.emit('new_message', {
-                author: msg.author.username,
-                avatar: msg.author.displayAvatarURL({ dynamic: true }),
-                bot: msg.author.bot,
-                content: parseMentions(msg),
-                channelId: msg.channelId,
-                timestamp: msg.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
+            socket.emit('new_message', formatMessage(msg));
         });
 
         botClient.login(token).catch(() => {
@@ -113,14 +120,7 @@ io.on('connection', (socket) => {
             const channel = botClient.channels.cache.get(channelId);
             if (!channel) return;
             const msgs = await channel.messages.fetch({ limit: 50 });
-            const formatted = msgs.map(m => ({
-                author: m.author.username,
-                avatar: m.author.displayAvatarURL({ dynamic: true }),
-                bot: m.author.bot,
-                content: parseMentions(m),
-                channelId: m.channelId,
-                timestamp: m.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            })).reverse();
+            const formatted = msgs.map(m => formatMessage(m)).reverse();
             socket.emit('messages', formatted);
         } catch(e) {}
     });
