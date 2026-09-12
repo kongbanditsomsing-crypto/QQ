@@ -3,21 +3,27 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const path = require('path');
-
-const { createDiscordClient } = require('./src/discordClient');
-const { getGuildStructure } = require('./src/channelManager');
-const { connectToVoice, leaveVoice, playSound, SOUNDBOARD_LIST } = require('./src/voiceManager');
+const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
 
 app.use(express.static(path.join(__dirname, 'public')));
 
 let botClient = null;
 
 io.on('connection', (socket) => {
-    socket.emit('soundboard_list', SOUNDBOARD_LIST);
-
     socket.on('login', (token) => {
-        if (botClient) botClient.destroy();
-        botClient = createDiscordClient();
+        if (botClient) {
+            try { botClient.destroy(); } catch(e){}
+        }
+
+        botClient = new Client({
+            intents: [
+                GatewayIntentBits.Guilds,
+                GatewayIntentBits.GuildMessages,
+                GatewayIntentBits.MessageContent,
+                GatewayIntentBits.GuildMembers,
+                GatewayIntentBits.GuildVoiceStates
+            ]
+        });
 
         botClient.once('ready', () => {
             socket.emit('login_success', {
@@ -44,8 +50,8 @@ io.on('connection', (socket) => {
             });
         });
 
-        botClient.login(token).catch(err => {
-            socket.emit('login_error', "Bot Token ไม่ถูกต้อง หรือไม่ได้เปิด Intents");
+        botClient.login(token).catch(() => {
+            socket.emit('login_error', "Token ไม่ถูกต้อง หรือสิทธิ์ Intent ไม่เปิดใช้งาน");
         });
     });
 
@@ -54,15 +60,47 @@ io.on('connection', (socket) => {
         const guild = botClient.guilds.cache.get(guildId);
         if (!guild) return;
 
-        const data = await getGuildStructure(guild);
-        if (data) socket.emit('guild_data', data);
+        await guild.channels.fetch();
+        await guild.members.fetch().catch(() => {});
+
+        const categories = [];
+        const catMap = new Map();
+
+        guild.channels.cache.filter(c => c.type === ChannelType.GuildCategory).forEach(cat => {
+            catMap.set(cat.id, { name: cat.name.toUpperCase(), channels: [] });
+            categories.push(catMap.get(cat.id));
+        });
+
+        const uncategorized = { name: 'TEXT CHANNELS', channels: [] };
+        
+        guild.channels.cache.filter(c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildVoice).forEach(ch => {
+            const data = {
+                id: ch.id,
+                name: ch.name,
+                type: ch.type === ChannelType.GuildVoice ? 'voice' : 'text'
+            };
+            if (ch.parentId && catMap.has(ch.parentId)) {
+                catMap.get(ch.parentId).channels.push(data);
+            } else {
+                uncategorized.channels.push(data);
+            }
+        });
+
+        if (uncategorized.channels.length > 0) categories.unshift(uncategorized);
+
+        const members = guild.members.cache.map(m => ({
+            username: m.user.username,
+            avatar: m.user.displayAvatarURL({ dynamic: true })
+        }));
+
+        socket.emit('guild_data', { guildName: guild.name, categories, members });
     });
 
     socket.on('get_messages', async (channelId) => {
         if (!botClient) return;
         try {
             const channel = botClient.channels.cache.get(channelId);
-            if (!channel || channel.type !== 0) return;
+            if (!channel) return;
             const msgs = await channel.messages.fetch({ limit: 50 });
             const formatted = msgs.map(m => ({
                 author: m.author.username,
@@ -72,7 +110,7 @@ io.on('connection', (socket) => {
                 timestamp: m.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             })).reverse();
             socket.emit('messages', formatted);
-        } catch (e) {}
+        } catch(e) {}
     });
 
     socket.on('send_message', async (data) => {
@@ -80,30 +118,9 @@ io.on('connection', (socket) => {
         try {
             const channel = botClient.channels.cache.get(data.channelId);
             if (channel) await channel.send(data.content);
-        } catch (e) {}
-    });
-
-    socket.on('join_vc', (channelId) => {
-        if (!botClient) return;
-        const channel = botClient.channels.cache.get(channelId);
-        if (channel && channel.type === 2) {
-            connectToVoice(channel, channel.guild.voiceAdapterCreator);
-            socket.emit('vc_status', { connected: true, channelName: channel.name });
-        }
-    });
-
-    socket.on('leave_vc', () => {
-        leaveVoice();
-        socket.emit('vc_status', { connected: false });
-    });
-
-    socket.on('play_soundboard', (soundId) => {
-        const res = playSound(soundId);
-        socket.emit('soundboard_res', res);
+        } catch(e) {}
     });
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-    console.log(`[+] Discord Web Running on Port ${PORT}`);
-});
+http.listen(PORT, () => console.log(`Server running on port ${PORT}`));
