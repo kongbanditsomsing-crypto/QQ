@@ -63,7 +63,7 @@ socket.on('guild_data', (data) => {
                     socket.emit('get_messages', ch.id);
                 };
             } else {
-                chDiv.innerHTML = `${speakerSvg} <span class="truncate text-[#23a55a]">${ch.name}</span>`;
+                chDiv.innerHTML = `${speakerSvg} <span class="truncate">${ch.name}</span>`;
                 chDiv.onclick = () => {
                     alert(`Voice Channel: ${ch.name}`);
                 };
@@ -119,6 +119,36 @@ function showProfileModal(user) {
     document.body.appendChild(modal);
 }
 
+function showMessageActionMenu(msg) {
+    let existing = document.getElementById('actionMenu');
+    if (existing) existing.remove();
+
+    const menu = document.createElement('div');
+    menu.id = 'actionMenu';
+    menu.className = 'fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center';
+    menu.innerHTML = `
+        <div class="bg-[#2b2d31] rounded-t-2xl sm:rounded-xl w-full sm:w-[380px] p-2 shadow-2xl border border-[#1f2023] text-[#dbdee1] space-y-1">
+            <div class="p-3 hover:bg-[#35373c] rounded-md cursor-pointer flex items-center gap-3 font-medium text-sm" onclick="alert('ตอบกลับ'); document.getElementById('actionMenu').remove();">
+                <svg class="w-5 h-5 text-[#949ba4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg> ตอบกลับ
+            </div>
+            <div class="p-3 hover:bg-[#35373c] rounded-md cursor-pointer flex items-center gap-3 font-medium text-sm" onclick="alert('ส่งต่อ'); document.getElementById('actionMenu').remove();">
+                <svg class="w-5 h-5 text-[#949ba4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg> ส่งต่อ
+            </div>
+            <div class="p-3 hover:bg-[#35373c] rounded-md cursor-pointer flex items-center gap-3 font-medium text-sm" onclick="navigator.clipboard.writeText('${msg.content.replace(/'/g, "\\'")}'); alert('คัดลอกข้อความแล้ว'); document.getElementById('actionMenu').remove();">
+                <svg class="w-5 h-5 text-[#949ba4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg> คัดลอกข้อความ
+            </div>
+            <div class="p-3 hover:bg-[#35373c] rounded-md cursor-pointer flex items-center gap-3 font-medium text-sm" onclick="alert('ปักหมุดข้อความ'); document.getElementById('actionMenu').remove();">
+                <svg class="w-5 h-5 text-[#949ba4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg> ตรึงข้อความ
+            </div>
+            <div class="p-3 hover:bg-[#35373c] rounded-md cursor-pointer flex items-center gap-3 font-medium text-sm text-[#ed4245]" onclick="document.getElementById('actionMenu').remove();">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> ลบข้อความ
+            </div>
+            <div class="p-2 text-center text-xs text-[#949ba4] cursor-pointer hover:underline pt-2" onclick="document.getElementById('actionMenu').remove();">ยกเลิก</div>
+        </div>
+    `;
+    document.body.appendChild(menu);
+}
+
 socket.on('messages', (msgs) => {
     const ml = document.getElementById('messagesList');
     ml.innerHTML = '';
@@ -137,21 +167,46 @@ socket.on('new_message', (m) => {
 function addMessage(m) {
     const ml = document.getElementById('messagesList');
     const div = document.createElement('div');
-    div.className = 'flex gap-4 items-start hover:bg-[#2e3035] -mx-4 px-4 py-1';
+    div.className = 'flex gap-4 items-start hover:bg-[#2e3035] -mx-4 px-4 py-1 cursor-pointer';
+    div.oncontextmenu = (e) => { e.preventDefault(); showMessageActionMenu(m); };
+    div.onclick = () => showMessageActionMenu(m);
+
     const botBadge = m.bot ? `<span class="bg-[#5865F2] text-white text-[10px] px-1 py-0.1 rounded font-semibold ml-1">BOT</span>` : '';
-    
-    // Highlight mentions in content
     let formattedContent = m.content.replace(/(@\w+)/g, '<span class="bg-[#5865F2]/20 text-[#c9cdfb] px-1 rounded font-medium">$1</span>');
 
+    // Render embeds and attachments
+    let embedsHtml = '';
+    if (m.embeds && m.embeds.length > 0) {
+        m.embeds.forEach(emb => {
+            const borderColor = emb.color ? `#${emb.color.toString(16)}` : '#202225';
+            embedsHtml += `
+                <div class="mt-2 bg-[#2b2d31] rounded p-3 border-l-4 max-w-lg text-sm space-y-1" style="border-color: ${borderColor};">
+                    ${emb.title ? `<div class="font-bold text-white">${emb.title}</div>` : ''}
+                    ${emb.description ? `<div class="text-[#dbdee1] whitespace-pre-wrap">${emb.description}</div>` : ''}
+                    ${emb.image && emb.image.url ? `<img src="${emb.image.url}" class="rounded mt-2 max-h-60 object-cover">` : ''}
+                </div>
+            `;
+        });
+    }
+
+    let attachmentsHtml = '';
+    if (m.attachments && m.attachments.length > 0) {
+        m.attachments.forEach(url => {
+            attachmentsHtml += `<img src="${url}" class="rounded mt-2 max-h-60 object-cover max-w-full">`;
+        });
+    }
+
     div.innerHTML = `
-        <img src="${m.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}" class="w-10 h-10 rounded-full mt-0.5 cursor-pointer" onclick="showProfileModal({username: '${m.author}', avatar: '${m.avatar}', bot: ${m.bot}})">
+        <img src="${m.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}" class="w-10 h-10 rounded-full mt-0.5 cursor-pointer" onclick="event.stopPropagation(); showProfileModal({username: '${m.author}', avatar: '${m.avatar}', bot: ${m.bot}})">
         <div class="flex-1 min-w-0">
             <div class="flex items-baseline gap-2">
-                <span class="font-medium text-white text-sm cursor-pointer hover:underline" onclick="showProfileModal({username: '${m.author}', avatar: '${m.avatar}', bot: ${m.bot}})">${m.author}</span>
+                <span class="font-medium text-white text-sm cursor-pointer hover:underline" onclick="event.stopPropagation(); showProfileModal({username: '${m.author}', avatar: '${m.avatar}', bot: ${m.bot}})">${m.author}</span>
                 ${botBadge}
                 <span class="text-[10px] text-[#949ba4]">${m.timestamp}</span>
             </div>
             <div class="text-[#dbdee1] text-sm break-words mt-0.5">${formattedContent}</div>
+            ${embedsHtml}
+            ${attachmentsHtml}
         </div>
     `;
     ml.appendChild(div);
