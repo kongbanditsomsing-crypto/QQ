@@ -7,73 +7,86 @@
     <script src="/socket.io/socket.io.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap');
+        * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Noto Sans', sans-serif; background-color: #36393f; color: #dcddde; display: flex; height: 100vh; overflow: hidden; user-select: none; }
         
         /* Login Screen */
-        .login-container { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: url('https://discord.com/assets/7c8f476123d28d103efe381543274c25.png') center/cover; position: absolute; z-index: 100; }
-        .login-box { background: #36393f; padding: 32px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); text-align: center; width: 480px; }
+        .login-container { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #313338; position: absolute; z-index: 100; }
+        .login-box { background: #313338; padding: 32px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center; width: 480px; }
         .login-box h2 { color: #fff; margin-top: 0; font-size: 24px; }
-        .login-box p { color: #b9bbbe; font-size: 16px; margin-bottom: 20px; }
-        .login-box input { width: 100%; padding: 14px; margin-top: 10px; background: #202225; border: none; color: white; border-radius: 3px; box-sizing: border-box; font-size: 16px; outline: none; transition: 0.2s; }
-        .login-box input:focus { border: 1px solid #5865F2; }
-        .login-box button { width: 100%; padding: 14px; margin-top: 20px; background: #5865F2; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.2s; }
+        .login-box p { color: #b9bbbe; font-size: 14px; margin-bottom: 20px; }
+        .login-box input { width: 100%; padding: 12px; margin-top: 10px; background: #1e1f22; border: 1px solid #111214; color: white; border-radius: 4px; font-size: 16px; outline: none; }
+        .login-box input:focus { border-color: #5865F2; }
+        .login-box button { width: 100%; padding: 12px; margin-top: 20px; background: #5865F2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 16px; }
         .login-box button:hover { background: #4752c4; }
 
         /* App Layout */
         .app-container { display: flex; width: 100%; height: 100%; }
         
         /* Server List */
-        .guilds { width: 72px; background: #202225; display: flex; flex-direction: column; align-items: center; padding-top: 12px; overflow-y: scroll; scrollbar-width: none; }
-        .guild-icon { width: 48px; height: 48px; border-radius: 50%; background: #36393f; margin-bottom: 8px; cursor: pointer; display:flex; align-items:center; justify-content:center; overflow: hidden; transition: 0.2s; color: #fff; font-weight: bold; }
+        .guilds { width: 72px; background: #1e1f22; display: flex; flex-direction: column; align-items: center; padding-top: 12px; overflow-y: auto; flex-shrink: 0; }
+        .guild-icon { width: 48px; height: 48px; border-radius: 50%; background: #313338; margin-bottom: 8px; cursor: pointer; display:flex; align-items:center; justify-content:center; overflow: hidden; transition: 0.2s; color: #fff; font-weight: bold; font-size: 14px; }
         .guild-icon:hover { border-radius: 16px; background: #5865F2; }
+        .guild-icon.active { border-radius: 16px; background: #5865F2; }
         .guild-icon img { width: 100%; height: 100%; object-fit: cover; }
         
         /* Channels Sidebar */
-        .sidebar { width: 240px; background: #2f3136; display: flex; flex-direction: column; }
-        .sidebar-header { height: 48px; min-height: 48px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 16px; font-weight: 700; color: #fff; border-bottom: 1px solid #202225;}
-        .channels { flex: 1; overflow-y: auto; padding: 16px 8px; }
-        .channel-item { padding: 8px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; color: #8e9297; display: flex; align-items: center; gap: 8px; font-weight: 500;}
-        .channel-item:hover { background: #393c43; color: #dcddde; }
+        .sidebar { width: 240px; background: #2b2d31; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { height: 48px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 16px; font-weight: 700; color: #fff; border-bottom: 1px solid #1f2023; font-size: 15px;}
+        .channels { flex: 1; overflow-y: auto; padding: 12px 8px; }
+        .channel-item { padding: 8px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; color: #949ba4; display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;}
+        .channel-item:hover { background: #35373c; color: #dbdee1; }
+        .channel-item.active { background: #404249; color: #fff; }
         
         /* User Profile Bottom */
-        .user-panel { height: 52px; background: #292b2f; display: flex; align-items: center; padding: 0 8px; gap: 8px; }
+        .user-panel { height: 55px; background: #232428; display: flex; align-items: center; padding: 0 8px; gap: 8px; }
         .user-panel img { width: 32px; height: 32px; border-radius: 50%; }
-        .user-panel-info { display: flex; flex-direction: column; }
-        .user-panel-info .name { color: #fff; font-size: 14px; font-weight: bold; }
-        .user-panel-info .tag { color: #b9bbbe; font-size: 12px; }
+        .user-panel-info { display: flex; flex-direction: column; overflow: hidden; }
+        .user-panel-info .name { color: #f2f3f5; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-panel-info .tag { color: #949ba4; font-size: 12px; }
 
         /* Chat Area */
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: #36393f; }
-        .chat-header { height: 48px; min-height: 48px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 16px; font-weight: 700; font-size: 16px; color: #fff; border-bottom: 1px solid #202225;}
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: #313338; min-width: 0; }
+        .chat-header { height: 48px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 16px; font-weight: 700; font-size: 16px; color: #fff; border-bottom: 1px solid #1f2023;}
         .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
-        .message { display: flex; gap: 16px; margin-top: 4px;}
-        .message:hover { background: #32353b; }
-        .message img { width: 40px; height: 40px; border-radius: 50%; cursor: pointer;}
-        .message-content { display: flex; flex-direction: column; }
+        .message { display: flex; gap: 16px; margin-top: 4px; }
+        .message:hover { background: #2e3035; margin: 0 -16px; padding: 0 16px; }
+        .message img { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; flex-shrink: 0;}
+        .message-content { display: flex; flex-direction: column; min-width: 0; }
         .message-header { display: flex; align-items: baseline; gap: 8px; }
-        .message-header .author { font-weight: 500; color: #fff; cursor: pointer;}
+        .message-header .author { font-weight: 500; color: #fff; cursor: pointer; font-size: 15px;}
         .message-header .author:hover { text-decoration: underline; }
-        .message-header .time { font-size: 12px; color: #72767d; }
-        .message-content .text { color: #dcddde; word-break: break-word; line-height: 1.4; user-select: text;}
+        .message-header .time { font-size: 12px; color: #949ba4; }
+        .message-content .text { color: #dbdee1; word-break: break-word; line-height: 1.375rem; font-size: 0.9375rem; }
         
         /* Chat Input */
         .chat-input { padding: 0 16px 24px 16px; }
-        .chat-input-wrapper { background: #40444b; border-radius: 8px; display: flex; padding: 10px 16px; }
-        .chat-input-wrapper input { width: 100%; background: transparent; border: none; color: #dcddde; outline: none; font-size: 16px; font-family: inherit;}
+        .chat-input-wrapper { background: #383a40; border-radius: 8px; display: flex; padding: 10px 16px; }
+        .chat-input-wrapper input { width: 100%; background: transparent; border: none; color: #dbdee1; outline: none; font-size: 15px; font-family: inherit;}
         
+        /* Member List Sidebar (Right) */
+        .members-sidebar { width: 240px; background: #2b2d31; display: flex; flex-direction: column; padding: 16px 8px; overflow-y: auto; flex-shrink: 0; border-left: 1px solid #1f2023;}
+        .member-category { font-size: 12px; font-weight: 700; color: #949ba4; text-transform: uppercase; margin-bottom: 8px; margin-top: 12px; }
+        .member-item { display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 4px; cursor: pointer; }
+        .member-item:hover { background: #35373c; }
+        .member-avatar-container { position: relative; width: 32px; height: 32px; flex-shrink: 0; }
+        .member-avatar-container img { width: 32px; height: 32px; border-radius: 50%; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; position: absolute; bottom: 0; right: 0; border: 2px solid #2b2d31; background: #23a55a;}
+        .member-name { font-size: 14px; font-weight: 500; color: #949ba4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .member-item:hover .member-name { color: #dbdee1; }
+
         .hidden { display: none !important; }
-        /* Scrollbar styles */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #2e3338; border-radius: 4px;}
-        ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px;}
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #2b2d31; }
+        ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px;}
     </style>
 </head>
 <body>
     <div id="loginScreen" class="login-container">
         <div class="login-box">
             <h2>Welcome back!</h2>
-            <p>We're so excited to see you again!</p>
-            <div style="text-align: left; margin-bottom: 8px; color: #8e9297; font-size: 12px; font-weight: bold; text-transform: uppercase;">Bot Token <span style="color:#ed4245">*</span></div>
+            <p>Enter your Discord Bot Token to access.</p>
+            <div style="text-align: left; margin-bottom: 8px; color: #949ba4; font-size: 12px; font-weight: bold; text-transform: uppercase;">Bot Token <span style="color:#ed4245">*</span></div>
             <input type="password" id="tokenInput" placeholder="Paste bot token here...">
             <button onclick="login()">Log In</button>
             <p id="errorMsg" style="color: #ed4245; font-size: 14px; margin-top:16px;"></p>
@@ -88,14 +101,14 @@
             <div class="user-panel">
                 <img id="userAvatar" src="">
                 <div class="user-panel-info">
-                    <span class="name" id="userName">User</span>
+                    <span class="name" id="userName">Bot</span>
                     <span class="tag" id="userTag">#0000</span>
                 </div>
             </div>
         </div>
         <div class="chat-area">
             <div class="chat-header" id="chatHeader">
-                <span style="color: #8e9297; font-size: 24px; margin-right: 8px;">#</span> Select a channel
+                <span style="color: #949ba4; font-size: 24px; margin-right: 8px;">#</span> Select a channel
             </div>
             <div class="messages" id="messagesList"></div>
             <div class="chat-input">
@@ -104,17 +117,19 @@
                 </div>
             </div>
         </div>
+        <div class="members-sidebar" id="membersList">
+            <div class="member-category">Members</div>
+        </div>
     </div>
 
     <script>
         const socket = io();
         let currentChannelId = null;
-        let currentChannelName = "";
 
         function login() {
             const token = document.getElementById('tokenInput').value;
             if(!token) return;
-            document.getElementById('errorMsg').innerText = "Connecting...";
+            document.getElementById('errorMsg').innerText = "Connecting bot...";
             socket.emit('login', token);
         }
 
@@ -122,7 +137,7 @@
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
             document.getElementById('userName').innerText = user.username;
-            document.getElementById('userTag').innerText = "#" + (user.tag || "0000");
+            document.getElementById('userTag').innerText = "#" + user.tag;
             document.getElementById('userAvatar').src = user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
         });
 
@@ -130,13 +145,17 @@
 
         socket.on('guilds', (guilds) => {
             const gl = document.getElementById('guildList');
-            gl.innerHTML = '<div class="guild-icon" style="background:#5865F2; margin-bottom:12px;"><img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" style="width:28px; height:20px;"></div><div style="width: 32px; height: 2px; background: #36393f; border-radius: 1px; margin-bottom: 8px;"></div>';
+            gl.innerHTML = '<div class="guild-icon" style="background:#5865F2; margin-bottom:8px;"><img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" style="width:28px; height:20px;"></div><div style="width: 32px; height: 2px; background: #35373c; border-radius: 1px; margin-bottom: 8px;"></div>';
             guilds.forEach(g => {
                 const div = document.createElement('div');
                 div.className = 'guild-icon';
                 div.title = g.name;
                 div.innerHTML = g.icon ? `<img src="${g.icon}">` : g.name.charAt(0);
-                div.onclick = () => socket.emit('get_channels', g.id);
+                div.onclick = () => {
+                    document.querySelectorAll('.guild-icon').forEach(el => el.classList.remove('active'));
+                    div.classList.add('active');
+                    socket.emit('get_channels', g.id);
+                };
                 gl.appendChild(div);
             });
         });
@@ -148,15 +167,31 @@
             data.channels.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'channel-item';
-                div.innerHTML = `<span style="font-size:18px; color:#8e9297;">#</span> ${c.name}`;
+                div.innerHTML = `<span style="font-size:18px; color:#949ba4;">#</span> ${c.name}`;
                 div.onclick = () => {
+                    document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+                    div.classList.add('active');
                     currentChannelId = c.id;
-                    currentChannelName = c.name;
-                    document.getElementById('chatHeader').innerHTML = `<span style="color: #8e9297; font-size: 24px; margin-right: 8px;">#</span> ${c.name}`;
+                    document.getElementById('chatHeader').innerHTML = `<span style="color: #949ba4; font-size: 24px; margin-right: 8px;">#</span> ${c.name}`;
                     document.getElementById('msgInput').placeholder = `Message #${c.name}`;
                     socket.emit('get_messages', c.id);
                 };
                 cl.appendChild(div);
+            });
+
+            const ml = document.getElementById('membersList');
+            ml.innerHTML = `<div class="member-category">Members — ${data.members.length}</div>`;
+            data.members.forEach(m => {
+                const mDiv = document.createElement('div');
+                mDiv.className = 'member-item';
+                mDiv.innerHTML = `
+                    <div class="member-avatar-container">
+                        <img src="${m.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}">
+                        <div class="status-dot"></div>
+                    </div>
+                    <span class="member-name">${m.username}</span>
+                `;
+                ml.appendChild(mDiv);
             });
         });
 
