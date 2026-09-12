@@ -2,36 +2,35 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const { Client, GatewayIntentBits } = require('discord.js');
 const path = require('path');
+
+const { createDiscordClient } = require('./src/discordClient');
+const { getGuildStructure } = require('./src/channelManager');
+const { connectToVoice, leaveVoice, playSound, SOUNDBOARD_LIST } = require('./src/voiceManager');
 
 app.use(express.static(path.join(__dirname, 'public')));
 
 let botClient = null;
 
 io.on('connection', (socket) => {
+    // ส่งรายการ Soundboard ให้หน้าเว็บ
+    socket.emit('soundboard_list', SOUNDBOARD_LIST);
+
     socket.on('login', (token) => {
-        if(botClient) { botClient.destroy(); }
-        
-        botClient = new Client({
-            intents: [
-                GatewayIntentBits.Guilds,
-                GatewayIntentBits.GuildMessages,
-                GatewayIntentBits.MessageContent,
-                GatewayIntentBits.GuildMembers
-            ]
-        });
-        
+        if (botClient) botClient.destroy();
+        botClient = createDiscordClient();
+
         botClient.once('ready', () => {
             socket.emit('login_success', {
                 username: botClient.user.username,
                 tag: botClient.user.discriminator || '0',
                 avatar: botClient.user.displayAvatarURL({ dynamic: true })
             });
-            const guilds = botClient.guilds.cache.map(g => ({ 
-                id: g.id, 
-                name: g.name, 
-                icon: g.iconURL({ dynamic: true }) 
+
+            const guilds = botClient.guilds.cache.map(g => ({
+                id: g.id,
+                name: g.name,
+                icon: g.iconURL({ dynamic: true })
             }));
             socket.emit('guilds', guilds);
         });
@@ -42,69 +41,73 @@ io.on('connection', (socket) => {
                 content: msg.content,
                 channelId: msg.channelId,
                 avatar: msg.author.displayAvatarURL({ dynamic: true }),
-                timestamp: msg.createdAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                timestamp: msg.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             });
         });
 
         botClient.login(token).catch(err => {
-            socket.emit('login_error', "Bot Token ไม่ถูกต้อง หรือยังไม่ได้เปิด Intents ใน Developer Portal");
+            socket.emit('login_error', "Bot Token ไม่ถูกต้อง หรือไม่ได้เปิด Intents");
         });
     });
 
-    socket.on('get_channels', async (guildId) => {
+    socket.on('get_guild_data', async (guildId) => {
         if (!botClient) return;
         const guild = botClient.guilds.cache.get(guildId);
-        if(!guild) return;
-        
-        // 0 คือ GuildText ใน discord.js v14
-        const channels = guild.channels.cache
-            .filter(c => c.type === 0)
-            .map(c => ({ id: c.id, name: c.name }));
+        if (!guild) return;
 
-        try {
-            await guild.members.fetch();
-        } catch(e) {}
-
-        const members = guild.members.cache.map(m => ({
-            username: m.user.username,
-            avatar: m.user.displayAvatarURL({ dynamic: true }),
-            status: 'online'
-        }));
-
-        socket.emit('channels', { 
-            guildName: guild.name, 
-            channels: channels, 
-            members: members 
-        });
+        const data = await getGuildStructure(guild);
+        if (data) socket.emit('guild_data', data);
     });
 
     socket.on('get_messages', async (channelId) => {
         if (!botClient) return;
         try {
             const channel = botClient.channels.cache.get(channelId);
-            if(!channel) return;
+            if (!channel || channel.type !== 0) return;
             const msgs = await channel.messages.fetch({ limit: 50 });
             const formatted = msgs.map(m => ({
                 author: m.author.username,
                 content: m.content,
                 channelId: m.channelId,
                 avatar: m.author.displayAvatarURL({ dynamic: true }),
-                timestamp: m.createdAt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                timestamp: m.createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             })).reverse();
             socket.emit('messages', formatted);
-        } catch(e) {}
+        } catch (e) {}
     });
 
     socket.on('send_message', async (data) => {
         if (!botClient) return;
         try {
             const channel = botClient.channels.cache.get(data.channelId);
-            if(channel) await channel.send(data.content);
-        } catch(e) {}
+            if (channel) await channel.send(data.content);
+        } catch (e) {}
+    });
+
+    // เข้าห้องเสียง VC
+    socket.on('join_vc', (channelId) => {
+        if (!botClient) return;
+        const channel = botClient.channels.cache.get(channelId);
+        if (channel && channel.type === 2) {
+            connectToVoice(channel, channel.guild.voiceAdapterCreator);
+            socket.emit('vc_status', { connected: true, channelName: channel.name });
+        }
+    });
+
+    // ออกจาก VC
+    socket.on('leave_vc', () => {
+        leaveVoice();
+        socket.emit('vc_status', { connected: false });
+    });
+
+    // กดปุ่ม Soundboard
+    socket.on('play_soundboard', (soundId) => {
+        const res = playSound(soundId);
+        socket.emit('soundboard_res', res);
     });
 });
 
 const PORT = process.env.PORT || 3000;
 http.listen(PORT, () => {
-    console.log(`[+] Server Web UI Is Running on Port ${PORT}`);
+    console.log(`[+] Full Discord Web UI Running on Port ${PORT}`);
 });
