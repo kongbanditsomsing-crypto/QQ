@@ -2,62 +2,51 @@
 * { box-sizing: border-box; }
 body { margin: 0; font-family: 'Noto Sans', sans-serif; background-color: #313338; color: #dbdee1; display: flex; height: 100vh; overflow: hidden; user-select: none; }
 
-.login-container { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #313338; position: absolute; z-index: 100; }
-.login-box { background: #2b2d31; padding: 32px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); text-align: center; width: 440px; }
-.login-box h2 { color: #fff; margin-top: 0; }
-.login-box input { width: 100%; padding: 12px; margin-top: 10px; background: #1e1f22; border: 1px solid #111214; color: white; border-radius: 4px; outline: none; }
-.login-box button { width: 100%; padding: 12px; margin-top: 20px; background: #5865F2; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+/* Scrollbar blending with background */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #1a1b1e;
+    border-radius: 3px;
+}
 
-.app-container { display: flex; width: 100%; height: 100%; }
+#guildList::-webkit-scrollbar {
+    display: none;
+}
+#guildList {
+    scrollbar-width: none;
+}
 
-.guilds { width: 72px; background: #1e1f22; display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; }
-.guild-icon { width: 48px; height: 48px; border-radius: 50%; background: #313338; margin-bottom: 8px; cursor: pointer; display:flex; align-items:center; justify-content:center; overflow: hidden; color: #fff; font-weight: bold; }
-.guild-icon:hover, .guild-icon.active { border-radius: 16px; background: #5865F2; }
-.guild-icon img { width: 100%; height: 100%; object-fit: cover; }
-
-.sidebar { width: 240px; background: #2b2d31; display: flex; flex-direction: column; flex-shrink: 0; }
-.sidebar-header { height: 48px; display: flex; align-items: center; padding: 0 16px; font-weight: 700; color: #fff; border-bottom: 1px solid #1f2023; }
-.channels-container { flex: 1; overflow-y: auto; padding: 12px 8px; }
-
-.category-title { font-size: 12px; font-weight: 700; color: #949ba4; margin: 16px 0 4px 8px; display: flex; align-items: center; gap: 4px; cursor: pointer; }
-.category-title:hover { color: #dbdee1; }
-
-.channel-item { padding: 6px 8px; margin-bottom: 2px; border-radius: 4px; cursor: pointer; color: #949ba4; display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px; }
-.channel-item:hover { background: #35373c; color: #dbdee1; }
-.channel-item.active { background: #404249; color: #fff; }
-.channel-item.voice { color: #23a55a; }
-
-.vc-member { margin-left: 24px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #949ba4; padding: 4px 0; }
-.vc-member img { width: 20px; height: 20px; border-radius: 50%; }
-
-.voice-panel { background: #111214; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2023; }
-.voice-status { font-size: 12px; color: #fff; font-weight: bold; }
-.disconnect-btn { background: #f23f43; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; }
-
-.user-panel { height: 52px; background: #232428; display: flex; align-items: center; padding: 0 8px; gap: 8px; }
-.user-panel img { width: 32px; height: 32px; border-radius: 50%; }
-
-.chat-area { flex: 1; display: flex; flex-direction: column; background: #313338; min-width: 0; }
-.chat-header { height: 48px; display: flex; align-items: center; padding: 0 16px; font-weight: 700; color: #fff; border-bottom: 1px solid #1f2023; }
-.messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
-.message { display: flex; gap: 16px; }
-.message img { width: 40px; height: 40px; border-radius: 50%; }
-.message-header { display: flex; gap: 8px; align-items: baseline; }
-.message-header .author { font-weight: 500; color: #fff; }
-.message-header .time { font-size: 12px; color: #949ba4; }
-
-.chat-input { padding: 0 16px 20px 16px; }
-.chat-input-wrapper { background: #383a40; border-radius: 8px; padding: 10px 16px; }
-.chat-input-wrapper input { width: 100%; background: transparent; border: none; color: #dbdee1; outline: none; font-size: 15px; }
-
-.right-sidebar { width: 240px; background: #2b2d31; display: flex; flex-direction: column; border-left: 1px solid #1f2023; flex-shrink: 0; }
-.sidebar-section { padding: 12px; border-bottom: 1px solid #1f2023; }
-.section-title { font-size: 12px; font-weight: 700; color: #949ba4; text-transform: uppercase; margin-bottom: 8px; }
-.soundboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.sound-btn { background: #383a40; color: #fff; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; text-align: center; }
-.sound-btn:hover { background: #5865F2; }
-
-.member-item { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 4px; }
-.member-item img { width: 32px; height: 32px; border-radius: 50%; }
+.guild-icon {
+    width: 48px !important;
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+    flex-shrink: 0 !important;
+    border-radius: 24px;
+    background: #313338;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    color: #fff;
+    font-weight: bold;
+    transition: all 0.2s ease;
+}
+.guild-icon:hover {
+    border-radius: 16px;
+    background: #5865F2;
+}
+.guild-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
 .hidden { display: none !important; }
