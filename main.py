@@ -152,7 +152,7 @@ async def verify_token(session: aiohttp.ClientSession, token: str):
 class TokenGatewayListener:
     def __init__(self, token_info: dict, phone: str, user_id: str):
         self.token = token_info["token"]
-        self.type = token_info["type"]  # "User" or "Bot"
+        self.type = token_info["type"]
         self.phone = phone
         self.user_id = user_id
         self.task = None
@@ -176,7 +176,6 @@ class TokenGatewayListener:
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.ws_connect(ws_url) as ws:
-                        # 1. Receive Hello
                         hello_msg = await ws.receive_json()
                         if hello_msg.get("op") != 10:
                             await asyncio.sleep(5)
@@ -185,13 +184,12 @@ class TokenGatewayListener:
                         heartbeat_interval = hello_msg["d"]["heartbeat_interval"] / 1000.0
                         heartbeat_task = asyncio.create_task(self._heartbeat(ws, heartbeat_interval))
 
-                        # 2. Identify Payload
                         if self.type == "Bot":
                             identify_payload = {
                                 "op": 2,
                                 "d": {
                                     "token": self.token,
-                                    "intents": 33280,  # Guilds + Guild Messages + Direct Messages + Message Content
+                                    "intents": 33280,
                                     "properties": {
                                         "os": "linux",
                                         "browser": "discord.py",
@@ -199,7 +197,7 @@ class TokenGatewayListener:
                                     }
                                 }
                             }
-                        else:  # User Token
+                        else:
                             identify_payload = {
                                 "op": 2,
                                 "d": {
@@ -216,7 +214,6 @@ class TokenGatewayListener:
 
                         await ws.send_json(identify_payload)
 
-                        # 3. Gateway Event Loop
                         async for msg in ws:
                             if not self.running:
                                 break
@@ -254,7 +251,6 @@ class TokenGatewayListener:
         content = data.get("content", "")
         voucher_code = extract_voucher_code(content)
 
-        # Check Attachments for QR Codes
         if not voucher_code and data.get("attachments"):
             for att in data["attachments"]:
                 filename = att.get("filename", "").lower()
@@ -338,16 +334,16 @@ async def update_bot_presence():
     await bot.change_presence(activity=activity)
 
 # --- UI Modals ---
-class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token และ เบอร์โทร"):
+class TokenInputModal(ui.Modal, title="กรอก Token และ เบอร์โทร"):
     phone = ui.TextInput(
         label="เบอร์โทรศัพท์ TrueMoney", 
         placeholder="08xxxxxxxx", 
         required=True
     )
     tokens_input = ui.TextInput(
-        label="Token (สูงสุด 5 ตัว คั่นด้วย , หรือขึ้นบรรทัดใหม่)",
+        label="Token (สูงสุด 3 ตัว)",  # แก้ไขความยาว label ไม่เกิน 45 อักษร
         style=discord.TextStyle.paragraph,
-        placeholder="เช่น token1, token2, token3 หรือวางคนละบรรทัด",
+        placeholder="คั่นด้วยเครื่องหมาย , หรือ วางแยกคนละบรรทัดได้เลยครับ",
         required=True
     )
 
@@ -386,7 +382,6 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
                 await sync_save_user(user_id, user_info)
                 await update_bot_presence()
 
-                # ถ้าเปิดระบบไว้อยู่แล้ว ให้เริ่ม Listener ทันที
                 if user_info["status"]:
                     await start_user_listeners(user_id, user_info)
 
@@ -449,7 +444,13 @@ class OeiSelect(ui.Select):
             discord.SelectOption(label="Check Token", value="5", description="ตรวจสอบความถูกต้องของ Token", emoji="<a:1000030106:1551256934215061615>"),
             discord.SelectOption(label="ล้างตัวเลือก", value="6", description="รีเซ็ตหน้าเมนูตัวเลือก", emoji="<a:1000030104:1551255815267295273>"),
         ]
-        super().__init__(placeholder="ลิสเลือกการทำงาน...", min_values=1, max_values=1, options=options)
+        super().__init__(
+            placeholder="ลิสเลือกการทำงาน...",
+            min_values=1,
+            max_values=1,
+            options=options,
+            custom_id="oei_select_dropdown"
+        )
 
     async def callback(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
@@ -475,7 +476,7 @@ class OeiSelect(ui.Select):
                     else:
                         user_data["status"] = True
                         await sync_save_user(user_id, user_data)
-                        await start_user_listeners(user_id, user_data)  # เริ่มดักซองผ่าน Token ของ user
+                        await start_user_listeners(user_id, user_data)
                         embed = discord.Embed(
                             description="<a:1000030103:1551255510215426088> ระบบกำลังทำงาน สามารถรอรับเงินได้เลยย ถ้าหากต้องการหยุดเเค่กดลิสที่3จะเป็นการหยุด",
                             color=discord.Color.red()
@@ -487,7 +488,7 @@ class OeiSelect(ui.Select):
                     if user_data and user_data.get("status", False):
                         user_data["status"] = False
                         await sync_save_user(user_id, user_data)
-                        await stop_user_listeners(user_id)  # หยุดการดักผ่าน Token
+                        await stop_user_listeners(user_id)
                         embed = discord.Embed(
                             description="<a:1000030103:1551255510215426088> หยุดการทำงานสำเร็จ ถ้าหากต้องการให้กลับมาทำงานโปรดกดลิสที่2ได้ทันที!!",
                             color=discord.Color.red()
@@ -563,13 +564,16 @@ async def oei_command(interaction: discord.Interaction):
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
     await load_db_from_storage()
+    
+    # ลงทะเบียน View แบบคงอยู่ (Persistent View) ให้กดติดตลอดแม้มารีบอท
+    bot.add_view(OeiView())
+
     try:
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s)")
     except Exception as e:
         print(f"Failed to sync commands: {e}")
     
-    # Auto-start WebSocket listeners สำหรับคนที่เปิดระบบไว้ก่อนบอทรีสตาร์ท
     for u_id, u_info in db.items():
         if u_info.get("status", False):
             await start_user_listeners(u_id, u_info)
