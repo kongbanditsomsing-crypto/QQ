@@ -5,13 +5,13 @@ import time
 import asyncio
 import sqlite3
 import aiohttp
+import cv2
+import numpy as np
 from flask import Flask
 from threading import Thread
 import discord
 from discord.ext import commands
 from discord import app_commands
-from PIL import Image
-from pyzbar.pyzbar import decode
 
 # ==================== WEB SERVER (RENDER 24/7) ====================
 app = Flask('')
@@ -165,13 +165,15 @@ async def run_token_listener(user_id: str, token: str, phone: str, token_type: s
                                         async with session.get(att["url"]) as img_resp:
                                             if img_resp.status == 200:
                                                 img_bytes = await img_resp.read()
-                                                img = Image.open(io.BytesIO(img_bytes))
-                                                decoded = decode(img)
-                                                for obj in decoded:
-                                                    qr_text = obj.data.decode('utf-8')
-                                                    voucher_code, full_url = await process_text_for_voucher(qr_text, session)
-                                                    if voucher_code:
-                                                        break
+                                                nparr = np.frombuffer(img_bytes, np.uint8)
+                                                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                                                if img is not None:
+                                                    detector = cv2.QRCodeDetector()
+                                                    qr_text, _, _ = detector.detectAndDecode(img)
+                                                    if qr_text:
+                                                        voucher_code, full_url = await process_text_for_voucher(qr_text, session)
+                                                        if voucher_code:
+                                                            break
                             
                             if voucher_code:
                                 success, amount = await redeem_voucher(phone, voucher_code)
