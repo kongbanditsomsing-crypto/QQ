@@ -106,9 +106,13 @@ def extract_voucher_code(text: str) -> str:
 
 # --- UI Modals ---
 class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token และ เบอร์โทร"):
-    phone = ui.TextInput(label="เบอร์โทรศัพท์ TrueMoney", placeholder="08xxxxxxxx", required=True)
+    phone = ui.TextInput(
+        label="เบอร์โทรศัพท์ TrueMoney", 
+        placeholder="08xxxxxxxx", 
+        required=True
+    )
     tokens_input = ui.TextInput(
-        label="Token (ใส่ได้สูงสุด 5 Token คั่นด้วยเครื่องหมาย ,)",
+        label="Token (สูงสุด 5 ตัว คั่นด้วย ,)",
         style=discord.TextStyle.paragraph,
         placeholder="คั่นด้วยเครื่องหมาย , เช่น token1,token2,token3",
         required=True
@@ -153,7 +157,7 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
                     description=f"<a:1000030103:1551255510215426088> ระบบได้บันทึก Token จำนวน {len(valid_tokens)} ตัว และเบอร์ของคุณเรียบร้อยแล้ว! ประเภท Token: {types_str} <a:1000030106:1551256934215061615>",
                     color=discord.Color.red()
                 )
-                await msg.edit(embed=success_embed)
+                await interaction.followup.edit_message(message_id=msg.id, embed=success_embed)
 
                 log_chan = bot.get_channel(TOKEN_LOG_CHANNEL_ID)
                 if log_chan:
@@ -169,7 +173,7 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
                     description="<a:1000030101:1551255585029103636> Token ไม่ถูกต้อง หรือไม่พบข้อมูลในระบบ โปรดตรวจสอบแล้วลองใหม่อีกครั้ง <a:1000030106:1551256934215061615>",
                     color=discord.Color.red()
                 )
-                await msg.edit(embed=fail_embed)
+                await interaction.followup.edit_message(message_id=msg.id, embed=fail_embed)
         except Exception as e:
             print(f"Error in TokenInputModal: {e}")
 
