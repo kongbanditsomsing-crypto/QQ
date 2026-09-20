@@ -14,27 +14,94 @@ from keep_alive import keep_alive
 TOKEN_LOG_CHANNEL_ID = 1487818086202478822
 SUCCESS_LOG_CHANNEL_ID = 1489527387183120505
 GIF_URL = "https://cdn.discordapp.com/attachments/1489587803393364018/1551254339820064879/c7507064ec33d1c80c489e7400f60ef2.gif"
-DATA_FILE = "data.json"
 
-# --- Database Helpers ---
-def load_data():
-    if not os.path.exists(DATA_FILE):
+# --- Supabase Database Configuration ---
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://klftziiwaaxwjadrcvdd.supabase.com")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+
+def get_supabase_headers():
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json"
+    }
+
+async def load_all_users():
+    if not SUPABASE_KEY:
         return {}
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"Error loading data: {e}")
-        return {}
+    url = f"{SUPABASE_URL}/rest/v1/users?select=*"
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url, headers=get_supabase_headers()) as resp:
+                if resp.status == 200:
+                    rows = await resp.json()
+                    data = {}
+                    for row in rows:
+                        data[row["user_id"]] = {
+                            "phone": row.get("phone", ""),
+                            "tokens": row.get("tokens", []),
+                            "status": row.get("status", False),
+                            "total_earned": float(row.get("total_earned", 0.0)),
+                            "total_rounds": int(row.get("total_rounds", 0))
+                        }
+                    return data
+        except Exception as e:
+            print(f"Error loading from Supabase: {e}")
+    return {}
 
-def save_data(data):
-    try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        print(f"Error saving data: {e}")
+async def get_user_data(user_id: str):
+    if not SUPABASE_KEY:
+        return None
+    url = f"{SUPABASE_URL}/rest/v1/users?user_id=eq.{user_id}&select=*"
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url, headers=get_supabase_headers()) as resp:
+                if resp.status == 200:
+                    rows = await resp.json()
+                    if rows:
+                        row = rows[0]
+                        return {
+                            "phone": row.get("phone", ""),
+                            "tokens": row.get("tokens", []),
+                            "status": row.get("status", False),
+                            "total_earned": float(row.get("total_earned", 0.0)),
+                            "total_rounds": int(row.get("total_rounds", 0))
+                        }
+        except Exception as e:
+            print(f"Error getting user from Supabase: {e}")
+    return None
 
-db = load_data()
+async def save_user_data(user_id: str, user_info: dict):
+    if not SUPABASE_KEY:
+        return
+    url = f"{SUPABASE_URL}/rest/v1/users"
+    headers = get_supabase_headers()
+    headers["Prefer"] = "resolution=merge-duplicates"
+    payload = {
+        "user_id": user_id,
+        "phone": user_info.get("phone", ""),
+        "tokens": user_info.get("tokens", []),
+        "status": user_info.get("status", False),
+        "total_earned": user_info.get("total_earned", 0.0),
+        "total_rounds": user_info.get("total_rounds", 0)
+    }
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(url, json=payload, headers=headers) as resp:
+                pass
+        except Exception as e:
+            print(f"Error saving user to Supabase: {e}")
+
+async def delete_user_data(user_id: str):
+    if not SUPABASE_KEY:
+        return
+    url = f"{SUPABASE_URL}/rest/v1/users?user_id=eq.{user_id}"
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.delete(url, headers=get_supabase_headers()) as resp:
+                pass
+        except Exception as e:
+            print(f"Error deleting user from Supabase: {e}")
 
 # --- Bot Setup ---
 intents = discord.Intents.default()
@@ -45,9 +112,8 @@ intents.dm_messages = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def update_bot_presence():
-    global db
-    db = load_data()
-    total_tokens = sum(len(user_info.get("tokens", [])) for user_info in db.values())
+    all_users = await load_all_users()
+    total_tokens = sum(len(u.get("tokens", [])) for u in all_users.values())
     activity = discord.Game(name=f"ตอนนี้มีคนกำลังใช้บริการบอทดักอยู่ {total_tokens} คน")
     await bot.change_presence(activity=activity)
 
@@ -119,7 +185,6 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        global db
         try:
             await interaction.response.defer(ephemeral=True)
             
@@ -141,15 +206,15 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
             user_id = str(interaction.user.id)
 
             if valid_tokens:
-                db = load_data()
-                db[user_id] = {
+                existing = await get_user_data(user_id) or {}
+                user_info = {
                     "phone": self.phone.value.strip(),
                     "tokens": valid_tokens,
-                    "status": db.get(user_id, {}).get("status", False),
-                    "total_earned": db.get(user_id, {}).get("total_earned", 0.0),
-                    "total_rounds": db.get(user_id, {}).get("total_rounds", 0)
+                    "status": existing.get("status", False),
+                    "total_earned": existing.get("total_earned", 0.0),
+                    "total_rounds": existing.get("total_rounds", 0)
                 }
-                save_data(db)
+                await save_user_data(user_id, user_info)
                 await update_bot_presence()
 
                 types_str = ", ".join(list(set([vt['type'] for vt in valid_tokens])))
@@ -213,7 +278,6 @@ class OeiSelect(ui.Select):
         super().__init__(placeholder="ลิสเลือกการทำงาน...", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
-        global db
         user_id = str(interaction.user.id)
         val = self.values[0]
 
@@ -228,8 +292,7 @@ class OeiSelect(ui.Select):
                 await interaction.response.defer(ephemeral=True)
 
                 if val == "2":
-                    db = load_data()
-                    user_data = db.get(user_id)
+                    user_data = await get_user_data(user_id)
                     if not user_data or not user_data.get("tokens") or not user_data.get("phone"):
                         embed = discord.Embed(
                             description="<a:1000030101:1551255585029103636> คุณยังไม่ได้กรอกข้อมูลต่างๆ โปรดกรอกให้ครบในลิสที่1ด้วยย",
@@ -237,7 +300,7 @@ class OeiSelect(ui.Select):
                         )
                     else:
                         user_data["status"] = True
-                        save_data(db)
+                        await save_user_data(user_id, user_data)
                         embed = discord.Embed(
                             description="<a:1000030103:1551255510215426088> ระบบกำลังทำงาน สามารถรอรับเงินได้เลยย ถ้าหากต้องการหยุดเเค่กดลิสที่3จะเป็นการหยุด",
                             color=discord.Color.red()
@@ -245,11 +308,10 @@ class OeiSelect(ui.Select):
                     await interaction.followup.send(embed=embed, ephemeral=True)
 
                 elif val == "3":
-                    db = load_data()
-                    user_data = db.get(user_id)
+                    user_data = await get_user_data(user_id)
                     if user_data and user_data.get("status", False):
                         user_data["status"] = False
-                        save_data(db)
+                        await save_user_data(user_id, user_data)
                         embed = discord.Embed(
                             description="<a:1000030103:1551255510215426088> หยุดการทำงานสำเร็จ ถ้าหากต้องการให้กลับมาทำงานโปรดกดลิสที่2ได้ทันที!!",
                             color=discord.Color.red()
@@ -262,8 +324,7 @@ class OeiSelect(ui.Select):
                     await interaction.followup.send(embed=embed, ephemeral=True)
 
                 elif val == "4":
-                    db = load_data()
-                    user_data = db.get(user_id)
+                    user_data = await get_user_data(user_id)
                     if not user_data or not user_data.get("tokens"):
                         embed = discord.Embed(
                             description="<a:1000030101:1551255585029103636> ไม่มี Token ในระบบ โปรดกรอกข้อมูลในลิสที่ 1 ก่อนครับ",
@@ -284,11 +345,8 @@ class OeiSelect(ui.Select):
                     await interaction.followup.send(embed=embed, ephemeral=True)
 
                 elif val == "6":
-                    db = load_data()
-                    if user_id in db:
-                        db.pop(user_id)
-                        save_data(db)
-                        await update_bot_presence()
+                    await delete_user_data(user_id)
+                    await update_bot_presence()
                     embed = discord.Embed(
                         description="<a:1000030109:1551262224796876951> ล้างตัวเลือกสำเร็จ..",
                         color=discord.Color.red()
@@ -306,7 +364,6 @@ class OeiView(ui.View):
 # --- Global Message Listener for Sniping ---
 @bot.event
 async def on_message(message: discord.Message):
-    global db
     if message.author == bot.user:
         return
 
@@ -337,15 +394,15 @@ async def on_message(message: discord.Message):
 
     # If voucher code detected, attempt redeeming for active users
     if voucher_code:
-        db = load_data()
-        for user_id, user_data in list(db.items()):
+        all_users = await load_all_users()
+        for user_id, user_data in all_users.items():
             if user_data.get("status", False) and user_data.get("phone"):
                 phone = user_data["phone"]
                 success, amount_or_err = await redeem_truemoney(phone, voucher_code)
                 if success:
                     user_data["total_earned"] = user_data.get("total_earned", 0.0) + amount_or_err
                     user_data["total_rounds"] = user_data.get("total_rounds", 0) + 1
-                    save_data(db)
+                    await save_user_data(user_id, user_data)
 
                     log_chan = bot.get_channel(SUCCESS_LOG_CHANNEL_ID)
                     if log_chan:
