@@ -48,7 +48,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def update_bot_presence():
     global db
-    db.update(load_data())
+    db = load_data()
     total_tokens = sum(len(user_info.get("tokens", [])) for user_info in db.values())
     activity = discord.Game(name=f"ตอนนี้มีคนกำลังใช้บริการบอทดักอยู่ {total_tokens} คน")
     await bot.change_presence(activity=activity)
@@ -117,6 +117,7 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
     )
 
     async def on_submit(self, interaction: discord.Interaction):
+        global db
         await interaction.response.defer(ephemeral=True)
         
         checking_embed = discord.Embed(
@@ -126,7 +127,6 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
         msg = await interaction.followup.send(embed=checking_embed, ephemeral=True)
         await asyncio.sleep(1)
 
-        # แยก Token ด้วยเครื่องหมาย , หรือการขึ้นบรรทัดใหม่
         raw_tokens = [t.strip(" '\"\t\r\n") for t in re.split(r'[,,\n]+', self.tokens_input.value) if t.strip(" '\"\t\r\n")][:5]
         valid_tokens = []
 
@@ -138,9 +138,7 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
         user_id = str(interaction.user.id)
 
         if valid_tokens:
-            global db
-            db.update(load_data())
-            
+            db = load_data()
             db[user_id] = {
                 "phone": self.phone.value.strip(),
                 "tokens": valid_tokens,
@@ -207,6 +205,7 @@ class OeiSelect(ui.Select):
         super().__init__(placeholder="ลิสเลือกการทำงาน...", min_values=1, max_values=1, options=options)
 
     async def callback(self, interaction: discord.Interaction):
+        global db
         user_id = str(interaction.user.id)
         val = self.values[0]
 
@@ -214,8 +213,7 @@ class OeiSelect(ui.Select):
             await interaction.response.send_modal(TokenInputModal())
 
         elif val == "2":
-            global db
-            db.update(load_data())
+            db = load_data()
             user_data = db.get(user_id)
             if not user_data or not user_data.get("tokens") or not user_data.get("phone"):
                 embed = discord.Embed(
@@ -233,8 +231,7 @@ class OeiSelect(ui.Select):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
         elif val == "3":
-            global db
-            db.update(load_data())
+            db = load_data()
             user_data = db.get(user_id)
             if user_data and user_data.get("status", False):
                 user_data["status"] = False
@@ -251,8 +248,7 @@ class OeiSelect(ui.Select):
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
         elif val == "4":
-            global db
-            db.update(load_data())
+            db = load_data()
             user_data = db.get(user_id)
             if not user_data or not user_data.get("tokens"):
                 embed = discord.Embed(
@@ -277,8 +273,7 @@ class OeiSelect(ui.Select):
             await interaction.response.send_modal(CheckSingleTokenModal())
 
         elif val == "6":
-            global db
-            db.update(load_data())
+            db = load_data()
             if user_id in db:
                 db.pop(user_id)
                 save_data(db)
@@ -297,6 +292,7 @@ class OeiView(ui.View):
 # --- Global Message Listener for Sniping ---
 @bot.event
 async def on_message(message: discord.Message):
+    global db
     if message.author == bot.user:
         return
 
@@ -327,8 +323,7 @@ async def on_message(message: discord.Message):
 
     # If voucher code detected, attempt redeeming for active users
     if voucher_code:
-        global db
-        db.update(load_data())
+        db = load_data()
         for user_id, user_data in list(db.items()):
             if user_data.get("status", False) and user_data.get("phone"):
                 phone = user_data["phone"]
@@ -367,7 +362,7 @@ async def oei_command(interaction: discord.Interaction):
             "<a:1000030106:1551256934215061615> วิธีใช้งาน\n"
             "-. กรอกลิส1ก่อนเป็นการใส่ข้อมูล\n"
             "-. หลังจากใส่ลิส1สามารถกดลิส2เป็นการเริ่มการดัก\n"
-            "-. หากต้องการหยุดให้กดลิส3 4.เป็นการเช็คการทำงาน 5.เช็คtokenต่างๆ\n"
+            "-. หากต้องการหยุดให้กดลิส3\n"
             "-."
         ),
         color=discord.Color.red()
