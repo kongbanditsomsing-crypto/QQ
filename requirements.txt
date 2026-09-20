@@ -3,4 +3,4 @@ aiohttp
 flask
 pillow
 opencv-python-headless
-pyzbar
+numpy
