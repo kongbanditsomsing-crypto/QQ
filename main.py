@@ -20,7 +20,7 @@ DATA_FILE = "data.json"
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://klftziiwaaxwjadrcvdd.supabase.com")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 
-# Global In-Memory Database Cache (รับประกันว่าข้อมูลอยู่ครบถ้วนแน่นอน)
+# Global In-Memory Database Cache
 db = {}
 
 def get_supabase_headers():
@@ -32,7 +32,6 @@ def get_supabase_headers():
 
 async def load_db_from_storage():
     global db
-    # 1. ดึงจาก Supabase
     if SUPABASE_KEY:
         url = f"{SUPABASE_URL}/rest/v1/users?select=*"
         async with aiohttp.ClientSession() as session:
@@ -50,12 +49,9 @@ async def load_db_from_storage():
                             }
                         print(f"Loaded {len(rows)} users from Supabase")
                         return
-                    else:
-                        print(f"Supabase load failed status: {resp.status}")
             except Exception as e:
                 print(f"Error loading from Supabase: {e}")
 
-    # 2. สำรองข้อมูลจาก data.json
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -66,17 +62,14 @@ async def load_db_from_storage():
 
 async def sync_save_user(user_id: str, user_info: dict):
     global db
-    # บันทึกลงหน่วยความจำหลักทันที
     db[user_id] = user_info
 
-    # เซฟลงไฟล์ local สำรอง
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(db, f, indent=4, ensure_ascii=False)
     except Exception as e:
         print(f"Error saving data.json: {e}")
 
-    # ส่งไปบันทึกที่ Supabase แบบ Background
     if SUPABASE_KEY:
         url = f"{SUPABASE_URL}/rest/v1/users"
         headers = get_supabase_headers()
@@ -92,31 +85,9 @@ async def sync_save_user(user_id: str, user_info: dict):
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.post(url, json=payload, headers=headers) as resp:
-                    if resp.status not in [200, 201]:
-                        text = await resp.text()
-                        print(f"Supabase save status {resp.status}: {text}")
-            except Exception as e:
-                print(f"Error saving user to Supabase: {e}")
-
-async def sync_delete_user(user_id: str):
-    global db
-    if user_id in db:
-        del db[user_id]
-
-    try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(db, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        print(f"Error saving data.json: {e}")
-
-    if SUPABASE_KEY:
-        url = f"{SUPABASE_URL}/rest/v1/users?user_id=eq.{user_id}"
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.delete(url, headers=get_supabase_headers()) as resp:
                     pass
             except Exception as e:
-                print(f"Error deleting user from Supabase: {e}")
+                print(f"Error saving user to Supabase: {e}")
 
 # --- Bot Setup ---
 intents = discord.Intents.default()
@@ -132,26 +103,43 @@ async def update_bot_presence():
     await bot.change_presence(activity=activity)
 
 # --- Helper Functions ---
-async def verify_token(token: str):
+async def verify_token(session: aiohttp.ClientSession, token: str):
     token = token.strip(" '\"\t\r\n")
     if not token:
         return False, None, None
 
-    headers = {"Authorization": token}
-    async with aiohttp.ClientSession() as session:
-        # Check User Token
-        async with session.get("https://discord.com/api/v10/users/@me", headers=headers) as resp:
+    # Check User Token
+    headers_user = {"Authorization": token}
+    try:
+        async with session.get("https://discord.com/api/v10/users/@me", headers=headers_user) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 return True, "User", f"{data.get('username')}#{data.get('discriminator', '0')}"
-        
-        # Check Bot Token
-        headers_bot = {"Authorization": f"Bot {token}"}
+            elif resp.status == 429:
+                await asyncio.sleep(1.5)
+                async with session.get("https://discord.com/api/v10/users/@me", headers=headers_user) as resp2:
+                    if resp2.status == 200:
+                        data = await resp2.json()
+                        return True, "User", f"{data.get('username')}#{data.get('discriminator', '0')}"
+    except Exception:
+        pass
+
+    # Check Bot Token
+    headers_bot = {"Authorization": f"Bot {token}"}
+    try:
         async with session.get("https://discord.com/api/v10/users/@me", headers=headers_bot) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 return True, "Bot", f"{data.get('username')}#{data.get('discriminator', '0')}"
-                
+            elif resp.status == 429:
+                await asyncio.sleep(1.5)
+                async with session.get("https://discord.com/api/v10/users/@me", headers=headers_bot) as resp2:
+                    if resp2.status == 200:
+                        data = await resp2.json()
+                        return True, "Bot", f"{data.get('username')}#{data.get('discriminator', '0')}"
+    except Exception:
+        pass
+
     return False, None, None
 
 def format_phone(phone: str) -> str:
@@ -192,9 +180,9 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
         required=True
     )
     tokens_input = ui.TextInput(
-        label="Token (สูงสุด 5 ตัว คั่นด้วย ,)",
+        label="Token (สูงสุด 5 ตัว คั่นด้วย , หรือขึ้นบรรทัดใหม่)",
         style=discord.TextStyle.paragraph,
-        placeholder="คั่นด้วยเครื่องหมาย , เช่น token1,token2,token3",
+        placeholder="เช่น token1, token2, token3 หรือวางคนละบรรทัด",
         required=True
     )
 
@@ -207,15 +195,18 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
                 color=discord.Color.red()
             )
             msg = await interaction.followup.send(embed=checking_embed, ephemeral=True)
-            await asyncio.sleep(1)
 
-            raw_tokens = [t.strip(" '\"\t\r\n") for t in re.split(r'[,,\n]+', self.tokens_input.value) if t.strip(" '\"\t\r\n")][:5]
+            # แยก Token รองรับทั้ง เครื่องหมาย , การขึ้นบรรทัดใหม่ และช่องว่าง
+            raw_tokens = [t.strip(" '\"\t\r\n") for t in re.split(r'[\n,]+', self.tokens_input.value) if t.strip(" '\"\t\r\n")][:5]
             valid_tokens = []
 
-            for t in raw_tokens:
-                is_valid, t_type, name = await verify_token(t)
-                if is_valid:
-                    valid_tokens.append({"token": t, "type": t_type, "name": name})
+            async with aiohttp.ClientSession() as session:
+                for idx, t in enumerate(raw_tokens):
+                    if idx > 0:
+                        await asyncio.sleep(0.4) # กัน Rate limit
+                    is_valid, t_type, name = await verify_token(session, t)
+                    if is_valid:
+                        valid_tokens.append({"token": t, "type": t_type, "name": name})
 
             user_id = str(interaction.user.id)
 
@@ -262,7 +253,8 @@ class CheckSingleTokenModal(ui.Modal, title="Check Token"):
     async def on_submit(self, interaction: discord.Interaction):
         try:
             await interaction.response.defer(ephemeral=True)
-            is_valid, t_type, name = await verify_token(self.token_input.value.strip())
+            async with aiohttp.ClientSession() as session:
+                is_valid, t_type, name = await verify_token(session, self.token_input.value.strip())
             
             if is_valid:
                 embed = discord.Embed(
@@ -287,7 +279,7 @@ class OeiSelect(ui.Select):
             discord.SelectOption(label="ปิดการทำงาน", value="3", description="หยุดระบบการดักซอง", emoji="<a:1000030101:1551255585029103636>"),
             discord.SelectOption(label="เช็คการทำงาน+โปรไฟล์โทเค่น", value="4", description="ดูสถานะและรายการ Token", emoji="<a:1000030093:1551252638794780883>"),
             discord.SelectOption(label="Check Token", value="5", description="ตรวจสอบความถูกต้องของ Token", emoji="<a:1000030106:1551256934215061615>"),
-            discord.SelectOption(label="ล้างตัวเลือก", value="6", description="รีเซ็ตและล้างข้อมูลทั้งหมด", emoji="<a:1000030104:1551255815267295273>"),
+            discord.SelectOption(label="ล้างตัวเลือก", value="6", description="รีเซ็ตหน้าเมนูตัวเลือก", emoji="<a:1000030104:1551255815267295273>"),
         ]
         super().__init__(placeholder="ลิสเลือกการทำงาน...", min_values=1, max_values=1, options=options)
 
@@ -359,10 +351,9 @@ class OeiSelect(ui.Select):
                     await interaction.followup.send(embed=embed, ephemeral=True)
 
                 elif val == "6":
-                    await sync_delete_user(user_id)
-                    await update_bot_presence()
+                    # กดแล้วตอบรับหน้าเมนูเฉยๆ โดยไม่มีการลบข้อมูล
                     embed = discord.Embed(
-                        description="<a:1000030109:1551262224796876951> ล้างตัวเลือกสำเร็จ..",
+                        description="<a:1000030109:1551262224796876951> ล้างตัวเลือกเรียบร้อย",
                         color=discord.Color.red()
                     )
                     await interaction.followup.send(embed=embed, ephemeral=True)
@@ -384,7 +375,6 @@ async def on_message(message: discord.Message):
     content = message.content
     voucher_code = extract_voucher_code(content)
 
-    # Scan Attachments for QR Code using OpenCV
     if not voucher_code and message.attachments:
         for attachment in message.attachments:
             if any(attachment.filename.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp']):
@@ -406,7 +396,6 @@ async def on_message(message: discord.Message):
             if voucher_code:
                 break
 
-    # If voucher code detected, attempt redeeming for active users
     if voucher_code:
         for user_id, user_data in list(db.items()):
             if user_data.get("status", False) and user_data.get("phone"):
