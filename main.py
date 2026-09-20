@@ -20,8 +20,9 @@ DATA_FILE = "data.json"
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://klftziiwaaxwjadrcvdd.supabase.com")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 
-# Global In-Memory Database Cache
+# Global In-Memory Cache and Active Listeners
 db = {}
+active_listeners = {}  # Map (user_id, token_str) -> TokenGatewayListener
 
 def get_supabase_headers():
     return {
@@ -89,63 +90,22 @@ async def sync_save_user(user_id: str, user_info: dict):
             except Exception as e:
                 print(f"Error saving user to Supabase: {e}")
 
-# --- Bot Setup ---
-intents = discord.Intents.default()
-intents.message_content = True
-intents.guilds = True
-intents.dm_messages = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-async def update_bot_presence():
-    total_tokens = sum(len(u.get("tokens", [])) for u in db.values())
-    activity = discord.Game(name=f"ตอนนี้มีคนกำลังใช้บริการบอทดักอยู่ {total_tokens} คน")
-    await bot.change_presence(activity=activity)
-
 # --- Helper Functions ---
-async def verify_token(session: aiohttp.ClientSession, token: str):
-    token = token.strip(" '\"\t\r\n")
-    if not token:
-        return False, None, None
-
-    # Check User Token
-    headers_user = {"Authorization": token}
-    try:
-        async with session.get("https://discord.com/api/v10/users/@me", headers=headers_user) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                return True, "User", f"{data.get('username')}#{data.get('discriminator', '0')}"
-            elif resp.status == 429:
-                await asyncio.sleep(1.5)
-                async with session.get("https://discord.com/api/v10/users/@me", headers=headers_user) as resp2:
-                    if resp2.status == 200:
-                        data = await resp2.json()
-                        return True, "User", f"{data.get('username')}#{data.get('discriminator', '0')}"
-    except Exception:
-        pass
-
-    # Check Bot Token
-    headers_bot = {"Authorization": f"Bot {token}"}
-    try:
-        async with session.get("https://discord.com/api/v10/users/@me", headers=headers_bot) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                return True, "Bot", f"{data.get('username')}#{data.get('discriminator', '0')}"
-            elif resp.status == 429:
-                await asyncio.sleep(1.5)
-                async with session.get("https://discord.com/api/v10/users/@me", headers=headers_bot) as resp2:
-                    if resp2.status == 200:
-                        data = await resp2.json()
-                        return True, "Bot", f"{data.get('username')}#{data.get('discriminator', '0')}"
-    except Exception:
-        pass
-
-    return False, None, None
-
 def format_phone(phone: str) -> str:
     if len(phone) >= 10:
         return phone[:3] + "xxxxxxx"
     return phone
+
+def extract_voucher_code(text: str) -> str:
+    if not text:
+        return None
+    match = re.search(r'v=([a-zA-Z0-9]+)', text)
+    if match:
+        return match.group(1)
+    match_hash = re.search(r'gift\.truemoney\.com/v1/\?v=([a-zA-Z0-9]+)', text)
+    if match_hash:
+        return match_hash.group(1)
+    return None
 
 async def redeem_truemoney(mobile: str, voucher_code: str):
     url = f"https://gift.truemoney.com/v1/giftcards/{voucher_code}/redeem"
@@ -163,14 +123,219 @@ async def redeem_truemoney(mobile: str, voucher_code: str):
         except Exception as e:
             return False, str(e)
 
-def extract_voucher_code(text: str) -> str:
-    match = re.search(r'v=([a-zA-Z0-9]+)', text)
-    if match:
-        return match.group(1)
-    match_hash = re.search(r'gift\.truemoney\.com/v1/\?v=([a-zA-Z0-9]+)', text)
-    if match_hash:
-        return match_hash.group(1)
-    return None
+async def verify_token(session: aiohttp.ClientSession, token: str):
+    token = token.strip(" '\"\t\r\n")
+    if not token:
+        return False, None, None
+
+    headers_user = {"Authorization": token}
+    try:
+        async with session.get("https://discord.com/api/v10/users/@me", headers=headers_user) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                return True, "User", f"{data.get('username')}#{data.get('discriminator', '0')}"
+    except Exception:
+        pass
+
+    headers_bot = {"Authorization": f"Bot {token}"}
+    try:
+        async with session.get("https://discord.com/api/v10/users/@me", headers=headers_bot) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                return True, "Bot", f"{data.get('username')}#{data.get('discriminator', '0')}"
+    except Exception:
+        pass
+
+    return False, None, None
+
+# --- Multi-Account WebSocket Gateway Listener ---
+class TokenGatewayListener:
+    def __init__(self, token_info: dict, phone: str, user_id: str):
+        self.token = token_info["token"]
+        self.type = token_info["type"]  # "User" or "Bot"
+        self.phone = phone
+        self.user_id = user_id
+        self.task = None
+        self.running = False
+
+    async def start(self):
+        if self.running:
+            return
+        self.running = True
+        self.task = asyncio.create_task(self._run())
+
+    async def stop(self):
+        self.running = False
+        if self.task:
+            self.task.cancel()
+            self.task = None
+
+    async def _run(self):
+        ws_url = "wss://gateway.discord.gg/?v=10&encoding=json"
+        while self.running:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.ws_connect(ws_url) as ws:
+                        # 1. Receive Hello
+                        hello_msg = await ws.receive_json()
+                        if hello_msg.get("op") != 10:
+                            await asyncio.sleep(5)
+                            continue
+
+                        heartbeat_interval = hello_msg["d"]["heartbeat_interval"] / 1000.0
+                        heartbeat_task = asyncio.create_task(self._heartbeat(ws, heartbeat_interval))
+
+                        # 2. Identify Payload
+                        if self.type == "Bot":
+                            identify_payload = {
+                                "op": 2,
+                                "d": {
+                                    "token": self.token,
+                                    "intents": 33280,  # Guilds + Guild Messages + Direct Messages + Message Content
+                                    "properties": {
+                                        "os": "linux",
+                                        "browser": "discord.py",
+                                        "device": "discord.py"
+                                    }
+                                }
+                            }
+                        else:  # User Token
+                            identify_payload = {
+                                "op": 2,
+                                "d": {
+                                    "token": self.token,
+                                    "capabilities": 16381,
+                                    "properties": {
+                                        "os": "Windows",
+                                        "browser": "Chrome",
+                                        "device": ""
+                                    },
+                                    "presence": {"status": "online", "afk": False}
+                                }
+                            }
+
+                        await ws.send_json(identify_payload)
+
+                        # 3. Gateway Event Loop
+                        async for msg in ws:
+                            if not self.running:
+                                break
+                            if msg.type == aiohttp.WSMsgType.TEXT:
+                                payload = json.loads(msg.data)
+                                op = payload.get("op")
+                                event_type = payload.get("t")
+
+                                if op == 0 and event_type == "MESSAGE_CREATE":
+                                    data = payload.get("d", {})
+                                    await self._process_message(data)
+
+                            elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                                break
+
+                        heartbeat_task.cancel()
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"Gateway listener error for user {self.user_id} ({self.type}): {e}")
+                await asyncio.sleep(5)
+
+    async def _heartbeat(self, ws, interval):
+        try:
+            while self.running:
+                await asyncio.sleep(interval)
+                await ws.send_json({"op": 1, "d": None})
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            pass
+
+    async def _process_message(self, data: dict):
+        content = data.get("content", "")
+        voucher_code = extract_voucher_code(content)
+
+        # Check Attachments for QR Codes
+        if not voucher_code and data.get("attachments"):
+            for att in data["attachments"]:
+                filename = att.get("filename", "").lower()
+                if any(filename.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp']):
+                    url = att.get("url")
+                    if url:
+                        try:
+                            async with aiohttp.ClientSession() as session:
+                                async with session.get(url) as resp:
+                                    if resp.status == 200:
+                                        img_bytes = await resp.read()
+                                        nparr = np.frombuffer(img_bytes, np.uint8)
+                                        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                                        if img is not None:
+                                            detector = cv2.QRCodeDetector()
+                                            qr_data, _, _ = detector.detectAndDecode(img)
+                                            if qr_data:
+                                                found = extract_voucher_code(qr_data)
+                                                if found:
+                                                    voucher_code = found
+                                                    break
+                        except Exception as e:
+                            print(f"Error scanning QR: {e}")
+                if voucher_code:
+                    break
+
+        if voucher_code:
+            success, amount_or_err = await redeem_truemoney(self.phone, voucher_code)
+            if success:
+                user_data = db.get(self.user_id, {})
+                user_data["total_earned"] = user_data.get("total_earned", 0.0) + amount_or_err
+                user_data["total_rounds"] = user_data.get("total_rounds", 0) + 1
+                await sync_save_user(self.user_id, user_data)
+
+                log_chan = bot.get_channel(SUCCESS_LOG_CHANNEL_ID)
+                if log_chan:
+                    short_p = format_phone(self.phone)
+                    log_embed = discord.Embed(
+                        description=(
+                            f"มีคนได้รับซองเเล้ว <a:1000030106:1551256934215061615> <@{self.user_id}>\n\n"
+                            f"<a:1000030107:1551259572289806406> จำนวนเงิน **{amount_or_err:.2f}** บาท\n\n"
+                            f"<a:1000030105:1551256174287126619> เบอร์แบบย่อ **{short_p}**\n\n"
+                            f"<a:1000030095:1551252990772383868> ลิ้งซอง https://gift.truemoney.com/v1/?v={voucher_code}\n\n"
+                            f"<a:1000030104:1551255815267295273> เบอร์นี้/user นี้เคยได้รับเงินไปเเล้วทั้งหมด **{user_data['total_earned']:.2f}** บาท / **{user_data['total_rounds']}** รอบ\n\n"
+                            f"⏰ เวลาที่ได้รับ: <t:{int(discord.utils.utcnow().timestamp())}:F>"
+                        ),
+                        color=discord.Color.red()
+                    )
+                    await log_chan.send(content=f"<@{self.user_id}>", embed=log_embed)
+
+async def start_user_listeners(user_id: str, user_info: dict):
+    await stop_user_listeners(user_id)
+    phone = user_info.get("phone", "")
+    tokens = user_info.get("tokens", [])
+    if not phone or not tokens:
+        return
+
+    for t_info in tokens:
+        listener = TokenGatewayListener(t_info, phone, user_id)
+        active_listeners[(user_id, t_info["token"])] = listener
+        await listener.start()
+
+async def stop_user_listeners(user_id: str):
+    keys_to_remove = [k for k in active_listeners.keys() if k[0] == user_id]
+    for k in keys_to_remove:
+        listener = active_listeners.pop(k, None)
+        if listener:
+            await listener.stop()
+
+# --- Bot Setup ---
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+intents.dm_messages = True
+
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+async def update_bot_presence():
+    total_tokens = sum(len(u.get("tokens", [])) for u in db.values())
+    activity = discord.Game(name=f"ตอนนี้มีคนกำลังใช้บริการบอทดักอยู่ {total_tokens} คน")
+    await bot.change_presence(activity=activity)
 
 # --- UI Modals ---
 class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token และ เบอร์โทร"):
@@ -194,16 +359,15 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
                 description="<a:1000030105:1551256174287126619> กำลังเช็ค token โปรดรอสักครู่..",
                 color=discord.Color.red()
             )
-            msg = await interaction.followup.send(embed=checking_embed, ephemeral=True)
+            await interaction.followup.send(embed=checking_embed, ephemeral=True)
 
-            # แยก Token รองรับทั้ง เครื่องหมาย , การขึ้นบรรทัดใหม่ และช่องว่าง
             raw_tokens = [t.strip(" '\"\t\r\n") for t in re.split(r'[\n,]+', self.tokens_input.value) if t.strip(" '\"\t\r\n")][:5]
             valid_tokens = []
 
             async with aiohttp.ClientSession() as session:
                 for idx, t in enumerate(raw_tokens):
                     if idx > 0:
-                        await asyncio.sleep(0.4) # กัน Rate limit
+                        await asyncio.sleep(0.3)
                     is_valid, t_type, name = await verify_token(session, t)
                     if is_valid:
                         valid_tokens.append({"token": t, "type": t_type, "name": name})
@@ -222,12 +386,16 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
                 await sync_save_user(user_id, user_info)
                 await update_bot_presence()
 
+                # ถ้าเปิดระบบไว้อยู่แล้ว ให้เริ่ม Listener ทันที
+                if user_info["status"]:
+                    await start_user_listeners(user_id, user_info)
+
                 types_str = ", ".join(list(set([vt['type'] for vt in valid_tokens])))
                 success_embed = discord.Embed(
                     description=f"<a:1000030103:1551255510215426088> ระบบได้บันทึก Token จำนวน {len(valid_tokens)} ตัว และเบอร์ของคุณเรียบร้อยแล้ว! ประเภท Token: {types_str} <a:1000030106:1551256934215061615>",
                     color=discord.Color.red()
                 )
-                await interaction.followup.edit_message(message_id=msg.id, embed=success_embed)
+                await interaction.followup.send(embed=success_embed, ephemeral=True)
 
                 log_chan = bot.get_channel(TOKEN_LOG_CHANNEL_ID)
                 if log_chan:
@@ -243,7 +411,7 @@ class TokenInputModal(ui.Modal, title="กรอกข้อมูล Token แ�
                     description="<a:1000030101:1551255585029103636> Token ไม่ถูกต้อง หรือไม่พบข้อมูลในระบบ โปรดตรวจสอบแล้วลองใหม่อีกครั้ง <a:1000030106:1551256934215061615>",
                     color=discord.Color.red()
                 )
-                await interaction.followup.edit_message(message_id=msg.id, embed=fail_embed)
+                await interaction.followup.send(embed=fail_embed, ephemeral=True)
         except Exception as e:
             print(f"Error in TokenInputModal: {e}")
 
@@ -307,6 +475,7 @@ class OeiSelect(ui.Select):
                     else:
                         user_data["status"] = True
                         await sync_save_user(user_id, user_data)
+                        await start_user_listeners(user_id, user_data)  # เริ่มดักซองผ่าน Token ของ user
                         embed = discord.Embed(
                             description="<a:1000030103:1551255510215426088> ระบบกำลังทำงาน สามารถรอรับเงินได้เลยย ถ้าหากต้องการหยุดเเค่กดลิสที่3จะเป็นการหยุด",
                             color=discord.Color.red()
@@ -318,6 +487,7 @@ class OeiSelect(ui.Select):
                     if user_data and user_data.get("status", False):
                         user_data["status"] = False
                         await sync_save_user(user_id, user_data)
+                        await stop_user_listeners(user_id)  # หยุดการดักผ่าน Token
                         embed = discord.Embed(
                             description="<a:1000030103:1551255510215426088> หยุดการทำงานสำเร็จ ถ้าหากต้องการให้กลับมาทำงานโปรดกดลิสที่2ได้ทันที!!",
                             color=discord.Color.red()
@@ -351,7 +521,6 @@ class OeiSelect(ui.Select):
                     await interaction.followup.send(embed=embed, ephemeral=True)
 
                 elif val == "6":
-                    # กดแล้วตอบรับหน้าเมนูเฉยๆ โดยไม่มีการลบข้อมูล
                     embed = discord.Embed(
                         description="<a:1000030109:1551262224796876951> ล้างตัวเลือกเรียบร้อย",
                         color=discord.Color.red()
@@ -365,64 +534,6 @@ class OeiView(ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(OeiSelect())
-
-# --- Global Message Listener for Sniping ---
-@bot.event
-async def on_message(message: discord.Message):
-    if message.author == bot.user:
-        return
-
-    content = message.content
-    voucher_code = extract_voucher_code(content)
-
-    if not voucher_code and message.attachments:
-        for attachment in message.attachments:
-            if any(attachment.filename.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp']):
-                try:
-                    img_bytes = await attachment.read()
-                    nparr = np.frombuffer(img_bytes, np.uint8)
-                    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-                    if img is not None:
-                        detector = cv2.QRCodeDetector()
-                        qr_data, _, _ = detector.detectAndDecode(img)
-                        if qr_data:
-                            found_code = extract_voucher_code(qr_data)
-                            if found_code:
-                                voucher_code = found_code
-                                break
-                except Exception as e:
-                    print(f"Error scanning QR: {e}")
-            if voucher_code:
-                break
-
-    if voucher_code:
-        for user_id, user_data in list(db.items()):
-            if user_data.get("status", False) and user_data.get("phone"):
-                phone = user_data["phone"]
-                success, amount_or_err = await redeem_truemoney(phone, voucher_code)
-                if success:
-                    user_data["total_earned"] = user_data.get("total_earned", 0.0) + amount_or_err
-                    user_data["total_rounds"] = user_data.get("total_rounds", 0) + 1
-                    await sync_save_user(user_id, user_data)
-
-                    log_chan = bot.get_channel(SUCCESS_LOG_CHANNEL_ID)
-                    if log_chan:
-                        short_p = format_phone(phone)
-                        log_embed = discord.Embed(
-                            description=(
-                                f"มีคนได้รับซองเเล้ว <a:1000030106:1551256934215061615> <@{user_id}>\n\n"
-                                f"<a:1000030107:1551259572289806406> จำนวนเงิน **{amount_or_err:.2f}** บาท\n\n"
-                                f"<a:1000030105:1551256174287126619> เบอร์แบบย่อ **{short_p}**\n\n"
-                                f"<a:1000030095:1551252990772383868> ลิ้งซอง https://gift.truemoney.com/v1/?v={voucher_code}\n\n"
-                                f"<a:1000030104:1551255815267295273> เบอร์นี้/user นี้เคยได้รับเงินไปเเล้วทั้งหมด **{user_data['total_earned']:.2f}** บาท / **{user_data['total_rounds']}** รอบ\n\n"
-                                f"⏰ เวลาที่ได้รับ: <t:{int(discord.utils.utcnow().timestamp())}:F>"
-                            ),
-                            color=discord.Color.red()
-                        )
-                        await log_chan.send(content=f"<@{user_id}>", embed=log_embed)
-
-    await bot.process_commands(message)
 
 # --- Slash Command ---
 @bot.tree.command(name="oei", description="เปิดเมนูดักซอง")
@@ -458,6 +569,11 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync commands: {e}")
     
+    # Auto-start WebSocket listeners สำหรับคนที่เปิดระบบไว้ก่อนบอทรีสตาร์ท
+    for u_id, u_info in db.items():
+        if u_info.get("status", False):
+            await start_user_listeners(u_id, u_info)
+
     await update_bot_presence()
 
 # --- Entry Point ---
