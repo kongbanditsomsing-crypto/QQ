@@ -22,13 +22,13 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 db = {}
 active_listeners = {}
 
-# ⚡ Global Pre-warmed HTTP Session สำหรับยิง TrueMoney
+# ⚡ Global Pre-warmed HTTP Session สำหรับยิง TrueMoney & เช็คลิ้งก์ย่อ
 tm_session = None
 
 async def get_tm_session():
     global tm_session
     if tm_session is None or tm_session.closed:
-        connector = aiohttp.TCPConnector(limit=200, ttl_dns_cache=300, keepalive_timeout=60)
+        connector = aiohttp.TCPConnector(limit=300, ttl_dns_cache=300, keepalive_timeout=60)
         tm_session = aiohttp.ClientSession(connector=connector)
     return tm_session
 
@@ -233,7 +233,7 @@ class TokenGatewayListener:
                                     print(f"⚡ [Gateway Ready] Token ({self.type}): {self.name} พร้อมดักซองแบบ Ultra Fast!")
 
                                 elif op == 0 and event_type == "MESSAGE_CREATE":
-                                    # ⚡ ยิงประมวลผลทันทีใน Background Task ไม่บล็อก Gateway Loop
+                                    # ⚡ ยิงประมวลผลทันทีใน Background Task
                                     asyncio.create_task(self._process_message(payload.get("d", {})))
 
                             elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
@@ -258,37 +258,69 @@ class TokenGatewayListener:
             pass
 
     async def _process_message(self, data: dict):
-        content = data.get("content", "")
+        content = data.get("content", "").strip()
+        attachments = data.get("attachments", [])
 
-        # ⚡ 1. Fast Pre-filter: ข้ามข้อความทั่วไปจาก 50 ดิสคอร์ดทันทีถ้าไม่มีลิ้งก์/ซอง
-        if "v=" not in content and "truemoney" not in content and not data.get("attachments"):
+        # ⚡ สนเฉพาะข้อความที่ขึ้นต้นด้วย https:// หรือมีรูปภาพติดมาเท่านั้น
+        is_https_prefix = content.startswith("https://")
+        has_attachments = len(attachments) > 0
+
+        if not (is_https_prefix or has_attachments):
             return
 
-        voucher_code = extract_voucher_code(content)
+        session = await get_tm_session()
 
-        # ⚡ 2. สแกน QR Code แบบแยก Thread เพื่อไม่ให้กระทบความเร็วข้อความ
-        if not voucher_code and data.get("attachments"):
-            for att in data["attachments"]:
+        # ⚡ 1. กรณีข้อความขึ้นต้นด้วย https:// -> ดึงทุกลิ้งก์ในข้อความมาสแกน
+        if is_https_prefix:
+            urls = re.findall(r'https?://[^\s<>"]+', content)
+            for url in urls:
+                asyncio.create_task(self._resolve_and_redeem(session, url))
+
+        # ⚡ 2. กรณีมีรูปภาพติดมา -> ดาวน์โหลดและสแกน QR Code
+        if has_attachments:
+            for att in attachments:
                 filename = att.get("filename", "").lower()
                 if any(filename.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.webp']):
-                    url = att.get("url")
-                    if url:
-                        try:
-                            session = await get_tm_session()
-                            async with session.get(url) as resp:
-                                if resp.status == 200:
-                                    img_bytes = await resp.read()
-                                    qr_data = await asyncio.to_thread(sync_decode_qr, img_bytes)
-                                    if qr_data:
-                                        voucher_code = extract_voucher_code(qr_data)
-                        except Exception:
-                            pass
-                if voucher_code:
-                    break
+                    att_url = att.get("url")
+                    if att_url:
+                        asyncio.create_task(self._process_qr_attachment(session, att_url))
 
+    async def _resolve_and_redeem(self, session: aiohttp.ClientSession, url: str):
+        # เช็คว่าเป็นลิ้งก์ซองตรงๆ หรือไม่
+        voucher_code = extract_voucher_code(url)
+
+        # หากไม่ใช่ลิ้งก์ตรง (อาจเป็นลิ้งก์ย่อ) -> ตามไปดัก Redirect URL
+        if not voucher_code:
+            try:
+                # ลองยิง HEAD request ก่อนเพื่อความเร็วสูงสุด
+                async with session.head(url, allow_redirects=True, timeout=aiohttp.ClientTimeout(total=1.2)) as resp:
+                    voucher_code = extract_voucher_code(str(resp.url))
+            except Exception:
+                pass
+
+            if not voucher_code:
+                try:
+                    # ถ้า HEAD โดนบล็อก ให้ลอง GET สั้นๆ
+                    async with session.get(url, allow_redirects=True, timeout=aiohttp.ClientTimeout(total=1.2)) as resp:
+                        voucher_code = extract_voucher_code(str(resp.url))
+                except Exception:
+                    pass
+
+        # เมื่อเจอโค้ดซอง -> ยิงกดรับเงินทันที
         if voucher_code:
-            # ⚡ 3. Fire-and-Forget: ยิงซองทันทีแบบขนาน
-            asyncio.create_task(self._fast_redeem(voucher_code))
+            await self._fast_redeem(voucher_code)
+
+    async def _process_qr_attachment(self, session: aiohttp.ClientSession, url: str):
+        try:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=1.5)) as resp:
+                if resp.status == 200:
+                    img_bytes = await resp.read()
+                    qr_data = await asyncio.to_thread(sync_decode_qr, img_bytes)
+                    if qr_data:
+                        # สแกนพบข้อความ/ลิ้งก์จาก QR -> ส่งเข้าตัวแกะลิ้งก์ต่อทันที
+                        await self._resolve_and_redeem(session, qr_data)
+        except Exception:
+            pass
 
     async def _fast_redeem(self, voucher_code: str):
         print(f"🚀 [ULTRA FAST DETECT] พบโค้ดซอง: {voucher_code} -> ยิงรับเงินทันที!")
@@ -309,7 +341,6 @@ class TokenGatewayListener:
                 if resp.status == 200 and res.get("status", {}).get("code") == "SUCCESS":
                     amount = float(res["data"]["my_ticket"]["amount_baht"])
                     print(f"🎉 [Redeem Success] รับเงินสำเร็จ {amount} บาท!")
-                    # ส่ง Log และบันทึก DB ย้อนหลังโดยไม่หน่วงเวลาดัก
                     asyncio.create_task(self._log_success_background(voucher_code, amount))
                 else:
                     print(f"❌ [Redeem Failed]: {res.get('status', {}).get('message', 'Unknown error')}")
@@ -593,7 +624,7 @@ async def oei_command(interaction: discord.Interaction):
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
     await load_db_from_storage()
-    await get_tm_session()  # Warmup HTTP Session ตั้งแต่เริ่มบอท
+    await get_tm_session()
     bot.add_view(OeiView())
 
     try:
