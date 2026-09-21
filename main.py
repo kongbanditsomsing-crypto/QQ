@@ -233,7 +233,7 @@ class TokenGatewayListener:
                                     print(f"⚡ [Gateway Ready] Token ({self.type}): {self.name} พร้อมดักซองแบบ Ultra Fast!")
 
                                 elif op == 0 and event_type == "MESSAGE_CREATE":
-                                    # ⚡ ยิงประมวลผลทันทีใน Background Task
+                                    # ยิงประมวลผลทันทีใน Background Task
                                     asyncio.create_task(self._process_message(payload.get("d", {})))
 
                             elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
@@ -261,22 +261,23 @@ class TokenGatewayListener:
         content = data.get("content", "").strip()
         attachments = data.get("attachments", [])
 
-        # ⚡ สนเฉพาะข้อความที่ขึ้นต้นด้วย https:// หรือมีรูปภาพติดมาเท่านั้น
-        is_https_prefix = content.startswith("https://")
+        # ⚡ ตรวจจับว่ามีลิ้งก์ http/https หรือรูปภาพในข้อความหรือไม่ (ไม่บังคับขึ้นต้นแล้ว)
+        has_link = "http://" in content or "https://" in content
         has_attachments = len(attachments) > 0
 
-        if not (is_https_prefix or has_attachments):
+        if not (has_link or has_attachments):
             return
 
         session = await get_tm_session()
+        print(f"📩 [MESSAGE DETECTED] พบข้อความสงสัย: {content[:60]}...")
 
-        # ⚡ 1. กรณีข้อความขึ้นต้นด้วย https:// -> ดึงทุกลิ้งก์ในข้อความมาสแกน
-        if is_https_prefix:
+        # 1. กรณีมีลิ้งก์ในข้อความ -> ดึงทุกลิ้งก์มาสแกน
+        if has_link:
             urls = re.findall(r'https?://[^\s<>"]+', content)
             for url in urls:
                 asyncio.create_task(self._resolve_and_redeem(session, url))
 
-        # ⚡ 2. กรณีมีรูปภาพติดมา -> ดาวน์โหลดและสแกน QR Code
+        # 2. กรณีมีรูปภาพติดมา -> ดาวน์โหลดและสแกน QR Code
         if has_attachments:
             for att in attachments:
                 filename = att.get("filename", "").lower()
@@ -317,13 +318,13 @@ class TokenGatewayListener:
                     img_bytes = await resp.read()
                     qr_data = await asyncio.to_thread(sync_decode_qr, img_bytes)
                     if qr_data:
-                        # สแกนพบข้อความ/ลิ้งก์จาก QR -> ส่งเข้าตัวแกะลิ้งก์ต่อทันที
+                        print(f"📷 [QR CODE FOUND]: {qr_data}")
                         await self._resolve_and_redeem(session, qr_data)
         except Exception:
             pass
 
     async def _fast_redeem(self, voucher_code: str):
-        print(f"🚀 [ULTRA FAST DETECT] พบโค้ดซอง: {voucher_code} -> ยิงรับเงินทันที!")
+        print(f"🚀 [EXECUTING REDEEM] กำลังยิง API ทรูเพื่อรับเงิน โค้ด: {voucher_code}")
         session = await get_tm_session()
         url = f"https://gift.truemoney.com/v1/giftcards/{voucher_code}/redeem"
         payload = {"mobile": self.phone, "voucher_hash": voucher_code}
@@ -335,17 +336,27 @@ class TokenGatewayListener:
         }
 
         try:
-            async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=2)) as resp:
+            async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=3)) as resp:
+                print(f"🌐 [HTTP Status Code]: {resp.status}")
+                
+                # บล็อกกรณี Server/Hosting โดน Cloudflare หรือ TrueMoney แบน
+                if resp.status != 200:
+                    raw_text = await resp.text()
+                    print(f"❌ [API Error HTTP {resp.status}]: {raw_text[:150]}")
+                    return
+
                 res = await resp.json()
-                print(f"💰 [Response]: {res}")
-                if resp.status == 200 and res.get("status", {}).get("code") == "SUCCESS":
+                print(f"💰 [TrueMoney Response]: {res}")
+                
+                if res.get("status", {}).get("code") == "SUCCESS":
                     amount = float(res["data"]["my_ticket"]["amount_baht"])
                     print(f"🎉 [Redeem Success] รับเงินสำเร็จ {amount} บาท!")
                     asyncio.create_task(self._log_success_background(voucher_code, amount))
                 else:
-                    print(f"❌ [Redeem Failed]: {res.get('status', {}).get('message', 'Unknown error')}")
+                    msg = res.get('status', {}).get('message', 'Unknown error')
+                    print(f"❌ [Redeem Failed]: {msg}")
         except Exception as e:
-            print(f"❌ [Redeem Error]: {e}")
+            print(f"❌ [Redeem Exception]: {e}")
 
     async def _log_success_background(self, voucher_code: str, amount: float):
         user_data = db.get(self.user_id, {})
