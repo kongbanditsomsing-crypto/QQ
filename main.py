@@ -16,13 +16,21 @@ SUCCESS_LOG_CHANNEL_ID = 1489527387183120505
 GIF_URL = "https://cdn.discordapp.com/attachments/1489587803393364018/1551254339820064879/c7507064ec33d1c80c489e7400f60ef2.gif"
 DATA_FILE = "data.json"
 
-# --- Supabase Database Configuration ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://klftziiwaaxwjadrcvdd.supabase.com")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 
-# Global In-Memory Cache and Active Listeners
 db = {}
-active_listeners = {}  # Map (user_id, token_str) -> TokenGatewayListener
+active_listeners = {}
+
+# ⚡ Global Pre-warmed HTTP Session สำหรับยิง TrueMoney
+tm_session = None
+
+async def get_tm_session():
+    global tm_session
+    if tm_session is None or tm_session.closed:
+        connector = aiohttp.TCPConnector(limit=200, ttl_dns_cache=300, keepalive_timeout=60)
+        tm_session = aiohttp.ClientSession(connector=connector)
+    return tm_session
 
 def get_supabase_headers():
     return {
@@ -90,7 +98,6 @@ async def sync_save_user(user_id: str, user_info: dict):
             except Exception as e:
                 print(f"Error saving user to Supabase: {e}")
 
-# --- Helper Functions ---
 def format_phone(phone: str) -> str:
     if len(phone) >= 10:
         return phone[:3] + "xxxxxxx"
@@ -99,37 +106,22 @@ def format_phone(phone: str) -> str:
 def extract_voucher_code(text: str) -> str:
     if not text:
         return None
-    match = re.search(r'v=([a-zA-Z0-9]+)', text)
+    match = re.search(r'[?&]v=([a-zA-Z0-9]+)', text)
     if match:
         return match.group(1)
-    match_hash = re.search(r'gift\.truemoney\.com/v1/\?v=([a-zA-Z0-9]+)', text)
-    if match_hash:
-        return match_hash.group(1)
     return None
 
-# --- TrueMoney Redeem Function (เพิ่ม Header ป้องกันการโดนบล็อก) ---
-async def redeem_truemoney(mobile: str, voucher_code: str):
-    url = f"https://gift.truemoney.com/v1/giftcards/{voucher_code}/redeem"
-    payload = {"mobile": mobile, "voucher_hash": voucher_code}
-    headers = {
-        "Content-Type": "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Origin": "https://gift.truemoney.com",
-        "Referer": f"https://gift.truemoney.com/v1/?v={voucher_code}"
-    }
-    
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.post(url, json=payload, headers=headers) as resp:
-                res = await resp.json()
-                print(f"💰 [TrueMoney API Response] Code: {voucher_code} -> Status {resp.status}: {res}")
-                if resp.status == 200 and res.get("status", {}).get("code") == "SUCCESS":
-                    amount = float(res["data"]["my_ticket"]["amount_baht"])
-                    return True, amount
-                return False, res.get("status", {}).get("message", "Unknown error")
-        except Exception as e:
-            print(f"❌ [TrueMoney API Error]: {e}")
-            return False, str(e)
+def sync_decode_qr(img_bytes):
+    try:
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is not None:
+            detector = cv2.QRCodeDetector()
+            qr_data, _, _ = detector.detectAndDecode(img)
+            return qr_data
+    except Exception:
+        pass
+    return None
 
 async def verify_token(session: aiohttp.ClientSession, token: str):
     token = token.strip(" '\"\t\r\n")
@@ -156,7 +148,7 @@ async def verify_token(session: aiohttp.ClientSession, token: str):
 
     return False, None, None
 
-# --- Multi-Account WebSocket Gateway Listener ---
+# --- High Speed Gateway Listener ---
 class TokenGatewayListener:
     def __init__(self, token_info: dict, phone: str, user_id: str):
         self.token = token_info["token"]
@@ -166,6 +158,7 @@ class TokenGatewayListener:
         self.user_id = user_id
         self.task = None
         self.running = False
+        self.sequence = None
 
     async def start(self):
         if self.running:
@@ -181,7 +174,7 @@ class TokenGatewayListener:
 
     async def _run(self):
         ws_url = "wss://gateway.discord.gg/?v=10&encoding=json"
-        print(f"🔌 [Gateway Connecting] User: {self.user_id} | Token ({self.type}): {self.name}")
+        print(f"🔌 [Gateway Connecting] Token ({self.type}): {self.name}")
         while self.running:
             try:
                 async with aiohttp.ClientSession() as session:
@@ -200,14 +193,10 @@ class TokenGatewayListener:
                                 "d": {
                                     "token": self.token,
                                     "intents": 33280,
-                                    "properties": {
-                                        "os": "linux",
-                                        "browser": "discord.py",
-                                        "device": "discord.py"
-                                    }
+                                    "properties": {"os": "linux", "browser": "discord.py", "device": "discord.py"}
                                 }
                             }
-                        else:  # User Token (ปรับแต่ง Payload ให้เหม่น Browser จริง)
+                        else:
                             identify_payload = {
                                 "op": 2,
                                 "d": {
@@ -237,12 +226,15 @@ class TokenGatewayListener:
                                 op = payload.get("op")
                                 event_type = payload.get("t")
 
+                                if payload.get("s") is not None:
+                                    self.sequence = payload.get("s")
+
                                 if op == 0 and event_type == "READY":
-                                    print(f"✅ [Gateway Connected Success] Token ({self.type}): {self.name}")
+                                    print(f"⚡ [Gateway Ready] Token ({self.type}): {self.name} พร้อมดักซองแบบ Ultra Fast!")
 
                                 elif op == 0 and event_type == "MESSAGE_CREATE":
-                                    data = payload.get("d", {})
-                                    await self._process_message(data)
+                                    # ⚡ ยิงประมวลผลทันทีใน Background Task ไม่บล็อก Gateway Loop
+                                    asyncio.create_task(self._process_message(payload.get("d", {})))
 
                             elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                                 break
@@ -253,13 +245,13 @@ class TokenGatewayListener:
                 break
             except Exception as e:
                 print(f"⚠️ [Gateway Error] Token ({self.type}) {self.name}: {e}")
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
 
     async def _heartbeat(self, ws, interval):
         try:
             while self.running:
                 await asyncio.sleep(interval)
-                await ws.send_json({"op": 1, "d": None})
+                await ws.send_json({"op": 1, "d": self.sequence})
         except asyncio.CancelledError:
             pass
         except Exception:
@@ -267,9 +259,14 @@ class TokenGatewayListener:
 
     async def _process_message(self, data: dict):
         content = data.get("content", "")
+
+        # ⚡ 1. Fast Pre-filter: ข้ามข้อความทั่วไปจาก 50 ดิสคอร์ดทันทีถ้าไม่มีลิ้งก์/ซอง
+        if "v=" not in content and "truemoney" not in content and not data.get("attachments"):
+            return
+
         voucher_code = extract_voucher_code(content)
 
-        # สแกนรูปภาพ QR Code หากไม่มีลิ้งก์ในข้อความ
+        # ⚡ 2. สแกน QR Code แบบแยก Thread เพื่อไม่ให้กระทบความเร็วข้อความ
         if not voucher_code and data.get("attachments"):
             for att in data["attachments"]:
                 filename = att.get("filename", "").lower()
@@ -277,52 +274,69 @@ class TokenGatewayListener:
                     url = att.get("url")
                     if url:
                         try:
-                            async with aiohttp.ClientSession() as session:
-                                async with session.get(url) as resp:
-                                    if resp.status == 200:
-                                        img_bytes = await resp.read()
-                                        nparr = np.frombuffer(img_bytes, np.uint8)
-                                        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                                        if img is not None:
-                                            detector = cv2.QRCodeDetector()
-                                            qr_data, _, _ = detector.detectAndDecode(img)
-                                            if qr_data:
-                                                found = extract_voucher_code(qr_data)
-                                                if found:
-                                                    voucher_code = found
-                                                    break
-                        except Exception as e:
-                            print(f"Error scanning QR: {e}")
+                            session = await get_tm_session()
+                            async with session.get(url) as resp:
+                                if resp.status == 200:
+                                    img_bytes = await resp.read()
+                                    qr_data = await asyncio.to_thread(sync_decode_qr, img_bytes)
+                                    if qr_data:
+                                        voucher_code = extract_voucher_code(qr_data)
+                        except Exception:
+                            pass
                 if voucher_code:
                     break
 
         if voucher_code:
-            print(f"🎯 [Voucher Detected] Token ({self.type}) {self.name} พบโค้ดซอง: {voucher_code} -> กำลังกดรับเบอร์ {self.phone}")
-            success, amount_or_err = await redeem_truemoney(self.phone, voucher_code)
-            if success:
-                print(f"🎉 [Redeem Success] รับเงินสำเร็จ {amount_or_err} บาท!")
-                user_data = db.get(self.user_id, {})
-                user_data["total_earned"] = user_data.get("total_earned", 0.0) + amount_or_err
-                user_data["total_rounds"] = user_data.get("total_rounds", 0) + 1
-                await sync_save_user(self.user_id, user_data)
+            # ⚡ 3. Fire-and-Forget: ยิงซองทันทีแบบขนาน
+            asyncio.create_task(self._fast_redeem(voucher_code))
 
-                log_chan = bot.get_channel(SUCCESS_LOG_CHANNEL_ID)
-                if log_chan:
-                    short_p = format_phone(self.phone)
-                    log_embed = discord.Embed(
-                        description=(
-                            f"มีคนได้รับซองเเล้ว <a:1000030106:1551256934215061615> <@{self.user_id}>\n\n"
-                            f"<a:1000030107:1551259572289806406> จำนวนเงิน **{amount_or_err:.2f}** บาท\n\n"
-                            f"<a:1000030105:1551256174287126619> เบอร์แบบย่อ **{short_p}**\n\n"
-                            f"<a:1000030095:1551252990772383868> ลิ้งซอง https://gift.truemoney.com/v1/?v={voucher_code}\n\n"
-                            f"<a:1000030104:1551255815267295273> เบอร์นี้/user นี้เคยได้รับเงินไปเเล้วทั้งหมด **{user_data['total_earned']:.2f}** บาท / **{user_data['total_rounds']}** รอบ\n\n"
-                            f"⏰ เวลาที่ได้รับ: <t:{int(discord.utils.utcnow().timestamp())}:F>"
-                        ),
-                        color=discord.Color.red()
-                    )
-                    await log_chan.send(content=f"<@{self.user_id}>", embed=log_embed)
-            else:
-                print(f"❌ [Redeem Failed] รับเงินไม่สำเร็จ สาเหตุ: {amount_or_err}")
+    async def _fast_redeem(self, voucher_code: str):
+        print(f"🚀 [ULTRA FAST DETECT] พบโค้ดซอง: {voucher_code} -> ยิงรับเงินทันที!")
+        session = await get_tm_session()
+        url = f"https://gift.truemoney.com/v1/giftcards/{voucher_code}/redeem"
+        payload = {"mobile": self.phone, "voucher_hash": voucher_code}
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36",
+            "Origin": "https://gift.truemoney.com",
+            "Referer": f"https://gift.truemoney.com/v1/?v={voucher_code}"
+        }
+
+        try:
+            async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=2)) as resp:
+                res = await resp.json()
+                print(f"💰 [Response]: {res}")
+                if resp.status == 200 and res.get("status", {}).get("code") == "SUCCESS":
+                    amount = float(res["data"]["my_ticket"]["amount_baht"])
+                    print(f"🎉 [Redeem Success] รับเงินสำเร็จ {amount} บาท!")
+                    # ส่ง Log และบันทึก DB ย้อนหลังโดยไม่หน่วงเวลาดัก
+                    asyncio.create_task(self._log_success_background(voucher_code, amount))
+                else:
+                    print(f"❌ [Redeem Failed]: {res.get('status', {}).get('message', 'Unknown error')}")
+        except Exception as e:
+            print(f"❌ [Redeem Error]: {e}")
+
+    async def _log_success_background(self, voucher_code: str, amount: float):
+        user_data = db.get(self.user_id, {})
+        user_data["total_earned"] = user_data.get("total_earned", 0.0) + amount
+        user_data["total_rounds"] = user_data.get("total_rounds", 0) + 1
+        await sync_save_user(self.user_id, user_data)
+
+        log_chan = bot.get_channel(SUCCESS_LOG_CHANNEL_ID)
+        if log_chan:
+            short_p = format_phone(self.phone)
+            log_embed = discord.Embed(
+                description=(
+                    f"มีคนได้รับซองเเล้ว <a:1000030106:1551256934215061615> <@{self.user_id}>\n\n"
+                    f"<a:1000030107:1551259572289806406> จำนวนเงิน **{amount:.2f}** บาท\n\n"
+                    f"<a:1000030105:1551256174287126619> เบอร์แบบย่อ **{short_p}**\n\n"
+                    f"<a:1000030095:1551252990772383868> ลิ้งซอง https://gift.truemoney.com/v1/?v={voucher_code}\n\n"
+                    f"<a:1000030104:1551255815267295273> เบอร์นี้เคยได้รับเงินไปเเล้วทั้งหมด **{user_data['total_earned']:.2f}** บาท / **{user_data['total_rounds']}** รอบ\n\n"
+                    f"⏰ เวลาที่ได้รับ: <t:{int(discord.utils.utcnow().timestamp())}:F>"
+                ),
+                color=discord.Color.red()
+            )
+            await log_chan.send(content=f"<@{self.user_id}>", embed=log_embed)
 
 async def start_user_listeners(user_id: str, user_info: dict):
     await stop_user_listeners(user_id)
@@ -356,13 +370,8 @@ async def update_bot_presence():
     activity = discord.Game(name=f"ตอนนี้มีคนกำลังใช้บริการบอทดักอยู่ {total_tokens} คน")
     await bot.change_presence(activity=activity)
 
-# --- UI Modals ---
 class TokenInputModal(ui.Modal, title="กรอก Token และ เบอร์โทร"):
-    phone = ui.TextInput(
-        label="เบอร์โทรศัพท์ TrueMoney", 
-        placeholder="08xxxxxxxx", 
-        required=True
-    )
+    phone = ui.TextInput(label="เบอร์โทรศัพท์ TrueMoney", placeholder="08xxxxxxxx", required=True)
     tokens_input = ui.TextInput(
         label="Token (สูงสุด 5 ตัว)",
         style=discord.TextStyle.paragraph,
@@ -456,7 +465,6 @@ class CheckSingleTokenModal(ui.Modal, title="Check Token"):
         except Exception as e:
             print(f"Error in CheckSingleTokenModal: {e}")
 
-# --- UI Dropdown View ---
 class OeiSelect(ui.Select):
     def __init__(self):
         options = [
@@ -559,7 +567,6 @@ class OeiView(ui.View):
         super().__init__(timeout=None)
         self.add_item(OeiSelect())
 
-# --- Slash Command ---
 @bot.tree.command(name="oei", description="เปิดเมนูดักซอง")
 async def oei_command(interaction: discord.Interaction):
     try:
@@ -582,11 +589,11 @@ async def oei_command(interaction: discord.Interaction):
     except Exception as e:
         print(f"Error in oei_command: {e}")
 
-# --- Bot Ready Event ---
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
     await load_db_from_storage()
+    await get_tm_session()  # Warmup HTTP Session ตั้งแต่เริ่มบอท
     bot.add_view(OeiView())
 
     try:
@@ -601,7 +608,6 @@ async def on_ready():
 
     await update_bot_presence()
 
-# --- Entry Point ---
 if __name__ == "__main__":
     keep_alive()
     TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
