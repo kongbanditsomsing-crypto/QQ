@@ -107,20 +107,28 @@ def extract_voucher_code(text: str) -> str:
         return match_hash.group(1)
     return None
 
+# --- TrueMoney Redeem Function (เพิ่ม Header ป้องกันการโดนบล็อก) ---
 async def redeem_truemoney(mobile: str, voucher_code: str):
     url = f"https://gift.truemoney.com/v1/giftcards/{voucher_code}/redeem"
     payload = {"mobile": mobile, "voucher_hash": voucher_code}
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Origin": "https://gift.truemoney.com",
+        "Referer": f"https://gift.truemoney.com/v1/?v={voucher_code}"
+    }
     
     async with aiohttp.ClientSession() as session:
         try:
             async with session.post(url, json=payload, headers=headers) as resp:
                 res = await resp.json()
+                print(f"💰 [TrueMoney API Response] Code: {voucher_code} -> Status {resp.status}: {res}")
                 if resp.status == 200 and res.get("status", {}).get("code") == "SUCCESS":
                     amount = float(res["data"]["my_ticket"]["amount_baht"])
                     return True, amount
                 return False, res.get("status", {}).get("message", "Unknown error")
         except Exception as e:
+            print(f"❌ [TrueMoney API Error]: {e}")
             return False, str(e)
 
 async def verify_token(session: aiohttp.ClientSession, token: str):
@@ -153,6 +161,7 @@ class TokenGatewayListener:
     def __init__(self, token_info: dict, phone: str, user_id: str):
         self.token = token_info["token"]
         self.type = token_info["type"]
+        self.name = token_info.get("name", "Unknown")
         self.phone = phone
         self.user_id = user_id
         self.task = None
@@ -172,6 +181,7 @@ class TokenGatewayListener:
 
     async def _run(self):
         ws_url = "wss://gateway.discord.gg/?v=10&encoding=json"
+        print(f"🔌 [Gateway Connecting] User: {self.user_id} | Token ({self.type}): {self.name}")
         while self.running:
             try:
                 async with aiohttp.ClientSession() as session:
@@ -197,7 +207,7 @@ class TokenGatewayListener:
                                     }
                                 }
                             }
-                        else:
+                        else:  # User Token (ปรับแต่ง Payload ให้เหม่น Browser จริง)
                             identify_payload = {
                                 "op": 2,
                                 "d": {
@@ -206,7 +216,12 @@ class TokenGatewayListener:
                                     "properties": {
                                         "os": "Windows",
                                         "browser": "Chrome",
-                                        "device": ""
+                                        "device": "",
+                                        "system_locale": "th-TH",
+                                        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                                        "browser_version": "122.0.0.0",
+                                        "os_version": "10",
+                                        "release_channel": "stable"
                                     },
                                     "presence": {"status": "online", "afk": False}
                                 }
@@ -222,7 +237,10 @@ class TokenGatewayListener:
                                 op = payload.get("op")
                                 event_type = payload.get("t")
 
-                                if op == 0 and event_type == "MESSAGE_CREATE":
+                                if op == 0 and event_type == "READY":
+                                    print(f"✅ [Gateway Connected Success] Token ({self.type}): {self.name}")
+
+                                elif op == 0 and event_type == "MESSAGE_CREATE":
                                     data = payload.get("d", {})
                                     await self._process_message(data)
 
@@ -234,7 +252,7 @@ class TokenGatewayListener:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"Gateway listener error for user {self.user_id} ({self.type}): {e}")
+                print(f"⚠️ [Gateway Error] Token ({self.type}) {self.name}: {e}")
                 await asyncio.sleep(5)
 
     async def _heartbeat(self, ws, interval):
@@ -251,6 +269,7 @@ class TokenGatewayListener:
         content = data.get("content", "")
         voucher_code = extract_voucher_code(content)
 
+        # สแกนรูปภาพ QR Code หากไม่มีลิ้งก์ในข้อความ
         if not voucher_code and data.get("attachments"):
             for att in data["attachments"]:
                 filename = att.get("filename", "").lower()
@@ -278,8 +297,10 @@ class TokenGatewayListener:
                     break
 
         if voucher_code:
+            print(f"🎯 [Voucher Detected] Token ({self.type}) {self.name} พบโค้ดซอง: {voucher_code} -> กำลังกดรับเบอร์ {self.phone}")
             success, amount_or_err = await redeem_truemoney(self.phone, voucher_code)
             if success:
+                print(f"🎉 [Redeem Success] รับเงินสำเร็จ {amount_or_err} บาท!")
                 user_data = db.get(self.user_id, {})
                 user_data["total_earned"] = user_data.get("total_earned", 0.0) + amount_or_err
                 user_data["total_rounds"] = user_data.get("total_rounds", 0) + 1
@@ -300,6 +321,8 @@ class TokenGatewayListener:
                         color=discord.Color.red()
                     )
                     await log_chan.send(content=f"<@{self.user_id}>", embed=log_embed)
+            else:
+                print(f"❌ [Redeem Failed] รับเงินไม่สำเร็จ สาเหตุ: {amount_or_err}")
 
 async def start_user_listeners(user_id: str, user_info: dict):
     await stop_user_listeners(user_id)
@@ -341,7 +364,7 @@ class TokenInputModal(ui.Modal, title="กรอก Token และ เบอร
         required=True
     )
     tokens_input = ui.TextInput(
-        label="Token (สูงสุด 3 ตัว)",  # แก้ไขความยาว label ไม่เกิน 45 อักษร
+        label="Token (สูงสุด 5 ตัว)",
         style=discord.TextStyle.paragraph,
         placeholder="คั่นด้วยเครื่องหมาย , หรือ วางแยกคนละบรรทัดได้เลยครับ",
         required=True
@@ -564,8 +587,6 @@ async def oei_command(interaction: discord.Interaction):
 async def on_ready():
     print(f"Logged in as {bot.user.name}")
     await load_db_from_storage()
-    
-    # ลงทะเบียน View แบบคงอยู่ (Persistent View) ให้กดติดตลอดแม้มารีบอท
     bot.add_view(OeiView())
 
     try:
