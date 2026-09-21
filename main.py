@@ -10,6 +10,11 @@ import cv2
 import numpy as np
 from keep_alive import keep_alive
 
+# -------------------------------------------------------------
+# 📌 URL ของ Cloudflare Tunnel ใน Termux
+TERMUX_PROXY_URL = os.environ.get("TERMUX_PROXY_URL", "https://wizard-cameron-taken-markers.trycloudflare.com/redeem")
+# -------------------------------------------------------------
+
 # --- Configuration ---
 TOKEN_LOG_CHANNEL_ID = 1487818086202478822
 SUCCESS_LOG_CHANNEL_ID = 1489527387183120505
@@ -22,7 +27,7 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 db = {}
 active_listeners = {}
 
-# ⚡ Global Pre-warmed HTTP Session สำหรับยิง TrueMoney & เช็คลิ้งก์ย่อ
+# Global HTTP Session
 tm_session = None
 
 async def get_tm_session():
@@ -148,7 +153,7 @@ async def verify_token(session: aiohttp.ClientSession, token: str):
 
     return False, None, None
 
-# --- High Speed Gateway Listener ---
+# --- Gateway Listener ---
 class TokenGatewayListener:
     def __init__(self, token_info: dict, phone: str, user_id: str):
         self.token = token_info["token"]
@@ -233,7 +238,6 @@ class TokenGatewayListener:
                                     print(f"⚡ [Gateway Ready] Token ({self.type}): {self.name} พร้อมดักซองแบบ Ultra Fast!")
 
                                 elif op == 0 and event_type == "MESSAGE_CREATE":
-                                    # ยิงประมวลผลทันทีใน Background Task
                                     asyncio.create_task(self._process_message(payload.get("d", {})))
 
                             elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
@@ -261,7 +265,6 @@ class TokenGatewayListener:
         content = data.get("content", "").strip()
         attachments = data.get("attachments", [])
 
-        # ⚡ ตรวจจับว่ามีลิ้งก์ http/https หรือรูปภาพในข้อความหรือไม่ (ไม่บังคับขึ้นต้นแล้ว)
         has_link = "http://" in content or "https://" in content
         has_attachments = len(attachments) > 0
 
@@ -271,13 +274,11 @@ class TokenGatewayListener:
         session = await get_tm_session()
         print(f"📩 [MESSAGE DETECTED] พบข้อความสงสัย: {content[:60]}...")
 
-        # 1. กรณีมีลิ้งก์ในข้อความ -> ดึงทุกลิ้งก์มาสแกน
         if has_link:
             urls = re.findall(r'https?://[^\s<>"]+', content)
             for url in urls:
                 asyncio.create_task(self._resolve_and_redeem(session, url))
 
-        # 2. กรณีมีรูปภาพติดมา -> ดาวน์โหลดและสแกน QR Code
         if has_attachments:
             for att in attachments:
                 filename = att.get("filename", "").lower()
@@ -287,13 +288,10 @@ class TokenGatewayListener:
                         asyncio.create_task(self._process_qr_attachment(session, att_url))
 
     async def _resolve_and_redeem(self, session: aiohttp.ClientSession, url: str):
-        # เช็คว่าเป็นลิ้งก์ซองตรงๆ หรือไม่
         voucher_code = extract_voucher_code(url)
 
-        # หากไม่ใช่ลิ้งก์ตรง (อาจเป็นลิ้งก์ย่อ) -> ตามไปดัก Redirect URL
         if not voucher_code:
             try:
-                # ลองยิง HEAD request ก่อนเพื่อความเร็วสูงสุด
                 async with session.head(url, allow_redirects=True, timeout=aiohttp.ClientTimeout(total=1.2)) as resp:
                     voucher_code = extract_voucher_code(str(resp.url))
             except Exception:
@@ -301,13 +299,11 @@ class TokenGatewayListener:
 
             if not voucher_code:
                 try:
-                    # ถ้า HEAD โดนบล็อก ให้ลอง GET สั้นๆ
                     async with session.get(url, allow_redirects=True, timeout=aiohttp.ClientTimeout(total=1.2)) as resp:
                         voucher_code = extract_voucher_code(str(resp.url))
                 except Exception:
                     pass
 
-        # เมื่อเจอโค้ดซอง -> ยิงกดรับเงินทันที
         if voucher_code:
             await self._fast_redeem(voucher_code)
 
@@ -324,37 +320,27 @@ class TokenGatewayListener:
             pass
 
     async def _fast_redeem(self, voucher_code: str):
-        print(f"🚀 [EXECUTING REDEEM] กำลังยิง API ทรูเพื่อรับเงิน โค้ด: {voucher_code}")
+        print(f"🚀 [REDIRECTING TO TERMUX PROXY] ส่งไปยิงที่ Termux โค้ด: {voucher_code}")
         session = await get_tm_session()
-        url = f"https://gift.truemoney.com/v1/giftcards/{voucher_code}/redeem"
-        payload = {"mobile": self.phone, "voucher_hash": voucher_code}
-        headers = {
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36",
-            "Origin": "https://gift.truemoney.com",
-            "Referer": f"https://gift.truemoney.com/v1/?v={voucher_code}"
-        }
+        payload = {"phone": self.phone, "voucher_code": voucher_code}
 
         try:
-            async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=3)) as resp:
-                print(f"🌐 [HTTP Status Code]: {resp.status}")
-                
-                # บล็อกกรณี Server/Hosting โดน Cloudflare หรือ TrueMoney แบน
-                if resp.status != 200:
-                    raw_text = await resp.text()
-                    print(f"❌ [API Error HTTP {resp.status}]: {raw_text[:150]}")
-                    return
-
-                res = await resp.json()
-                print(f"💰 [TrueMoney Response]: {res}")
-                
-                if res.get("status", {}).get("code") == "SUCCESS":
-                    amount = float(res["data"]["my_ticket"]["amount_baht"])
-                    print(f"🎉 [Redeem Success] รับเงินสำเร็จ {amount} บาท!")
-                    asyncio.create_task(self._log_success_background(voucher_code, amount))
+            # ยิงผ่าน Termux Proxy ที่ตั้งไว้
+            async with session.post(TERMUX_PROXY_URL, json=payload, timeout=aiohttp.ClientTimeout(total=5)) as resp:
+                print(f"🌐 [Proxy HTTP Status]: {resp.status}")
+                if resp.status == 200:
+                    res = await resp.json()
+                    print(f"💰 [TrueMoney Response]: {res}")
+                    if res.get("status", {}).get("code") == "SUCCESS":
+                        amount = float(res["data"]["my_ticket"]["amount_baht"])
+                        print(f"🎉 [Redeem Success] ได้รับเงิน {amount} บาท!")
+                        asyncio.create_task(self._log_success_background(voucher_code, amount))
+                    else:
+                        msg = res.get('status', {}).get('message', 'Unknown error')
+                        print(f"❌ [Redeem Failed]: {msg}")
                 else:
-                    msg = res.get('status', {}).get('message', 'Unknown error')
-                    print(f"❌ [Redeem Failed]: {msg}")
+                    raw_text = await resp.text()
+                    print(f"❌ [Proxy Error HTTP {resp.status}]: {raw_text[:150]}")
         except Exception as e:
             print(f"❌ [Redeem Exception]: {e}")
 
